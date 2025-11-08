@@ -60,5 +60,4 @@ jobs:
         image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/collab-server:latest
         region: europe-north2
         allow-unauthenticated: true
-        </content>
 <parameter name="filePath">/Users/nurmek51/Collab/collab_server/.github/workflows/ci.yml
