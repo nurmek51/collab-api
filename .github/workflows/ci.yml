@@ -55,13 +55,13 @@ jobs:
 
     - name: Build and push Docker image
       run: |
-        docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/collab-server:latest .
-        docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/collab-server:latest
+        docker build -t europe-north2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/collab-server/collab-server:latest .
+        docker push europe-north2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/collab-server/collab-server:latest
 
     - name: Deploy to Google Cloud Run
-      uses: google-github-actions/deploy-cloudrun@v1
+      uses: google-github-actions/deploy-cloudrun@v2
       with:
         service: collab-server
-        image: gcr.io/${{ secrets.GCP_PROJECT_ID }}/collab-server:latest
+        image: europe-north2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/collab-server/collab-server:latest
         region: europe-north2
         allow-unauthenticated: true
