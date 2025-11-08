@@ -64,4 +64,4 @@ jobs:
         service: collab-api
         image: europe-north2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/collab-api/collab-api:latest
         region: europe-north2
-        allow-unauthenticated: true
+        flags: --allow-unauthenticated
