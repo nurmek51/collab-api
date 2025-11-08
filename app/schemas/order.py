@@ -1,0 +1,110 @@
+import uuid
+from pydantic import BaseModel, Field
+from typing import Optional, List, Dict, Any
+from datetime import datetime
+from enum import Enum
+
+
+class OrderStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+
+
+class OrderCompleteStatus(str, Enum):
+    PENDING = "pending"
+    IN_PROCESS = "in_process"
+    COMPLETED = "completed"
+
+
+class PayPer(str, Enum):
+    MONTH = "month"
+    HOURS = "hours"
+    WORDS = "words"
+
+
+class ScheduleType(str, Enum):
+    PART_TIME = "part-time"
+    FULL_TIME = "full-time"
+
+
+class FormatType(str, Enum):
+    HYBRID = "hybrid"
+    REMOTE = "remote"
+    ONSITE = "onsite"
+
+
+class SkillLevel(str, Enum):
+    JUNIOR = "junior"
+    MIDDLE = "middle"
+    SENIOR = "senior"
+
+
+class OrderCondition(BaseModel):
+    salary: Optional[float] = None
+    pay_per: Optional[PayPer] = None
+    required_experience: Optional[int] = Field(None, ge=0)
+    schedule_type: Optional[ScheduleType] = None
+    format_type: Optional[FormatType] = None
+
+
+class OrderSpecialization(BaseModel):
+    specialization: str = Field(..., min_length=1)
+    skill_level: SkillLevel
+    conditions: Optional[OrderCondition] = None
+    requirements: Optional[str] = None
+    vacancy_id: uuid.UUID  # Unique identifier for the vacancy - MUST be provided and never changes
+    is_occupied: bool = Field(default=False)  # Track if specialization is taken
+    occupied_by_freelancer_id: Optional[uuid.UUID] = None  # Reference to freelancer who occupied this specialization
+
+
+class OrderBase(BaseModel):
+    order_description: str = Field(..., min_length=1)
+    order_title: Optional[str] = Field(None, max_length=200)
+    chat_link: Optional[str] = Field(None, max_length=500)
+    requirements: Optional[str] = Field(None, min_length=1)
+    order_condition: Optional[OrderCondition] = None
+    contracts: Optional[Dict[str, Any]] = None
+    order_specializations: Optional[List[OrderSpecialization]] = None
+
+
+class OrderCreate(OrderBase):
+    name: Optional[str] = Field(None, max_length=100)
+    surname: Optional[str] = Field(None, max_length=100)
+    company_name: Optional[str] = Field(None, max_length=200)
+    company_position: Optional[str] = Field(None, max_length=100)
+
+
+class OrderRequestHelp(BaseModel):
+    pass
+
+
+class OrderUpdate(OrderBase):
+    order_description: Optional[str] = Field(None, min_length=1)
+    requirements: Optional[str] = Field(None, min_length=1)
+
+
+class OrderStatusUpdate(BaseModel):
+    order_status: Optional[OrderStatus] = None
+    order_complete_status: Optional[OrderCompleteStatus] = None
+
+
+class OrderResponse(OrderBase):
+    order_id: uuid.UUID
+    company_id: uuid.UUID
+    order_status: OrderStatus
+    order_complete_status: OrderCompleteStatus
+    order_colleagues: Optional[List[uuid.UUID]] = None  # Computed dynamically from accepted applications
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class OrderAdminResponse(OrderResponse):
+    client_id: uuid.UUID
+
+
+# Admin help request schema
+class AdminHelpRequest(BaseModel):
+    reason: Optional[str] = Field(None, max_length=500, description="Optional reason for the help request")
