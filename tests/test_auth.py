@@ -27,9 +27,7 @@ async def test_verify_otp_failure(client: AsyncClient):
         "phone_number": "+1234567890",
         "code": "0000"
     })
-    assert response.status_code == 200
-    data = response.json()
-    assert data["success"] is False
+    assert response.status_code == 400
 
 @pytest.mark.asyncio
 async def test_select_role_unauthorized(client: AsyncClient):

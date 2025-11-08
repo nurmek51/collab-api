@@ -20,8 +20,8 @@ async def test_order_creation_and_application_flow(client: AsyncClient):
         "order_description": "Need a senior Python developer for 3 months",
         "order_title": "Python Developer Position",
         "order_specializations": [
-            {"specialization": "Python Development", "skill_level": "senior"},
-            {"specialization": "FastAPI", "skill_level": "middle"},
+            {"specialization": "Python Development", "skill_level": "senior", "vacancy_id": "550e8400-e29b-41d4-a716-446655440002"},
+            {"specialization": "FastAPI", "skill_level": "middle", "vacancy_id": "550e8400-e29b-41d4-a716-446655440003"},
         ],
         "requirements": "3+ years experience required"
     }

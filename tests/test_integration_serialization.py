@@ -96,8 +96,8 @@ async def test_create_order_with_nested_payload(client: AsyncClient):
         "chat_link": "https://t.me/project_chat",
         "contracts": {"contract_type": "employment", "duration_months": 12},
         "order_specializations": [
-            {"specialization": "fullstack", "skill_level": "senior"},
-            {"specialization": "frontend", "skill_level": "middle"},
+            {"specialization": "fullstack", "skill_level": "senior", "vacancy_id": "550e8400-e29b-41d4-a716-446655440000"},
+            {"specialization": "frontend", "skill_level": "middle", "vacancy_id": "550e8400-e29b-41d4-a716-446655440001"},
         ],
         "name": "Client",
         "surname": "Owner",
