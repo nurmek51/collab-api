@@ -9,6 +9,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      ADMIN_PHONE: ${{ secrets.ADMIN_PHONE }}
+      ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+      ADMIN_SURNAME: ${{ secrets.ADMIN_SURNAME }}
 
     steps:
     - name: Checkout code
