@@ -30,13 +30,21 @@ def initialize_firebase() -> Optional[firebase_admin.App]:
     if settings.firebase_project_id:
         options["projectId"] = settings.firebase_project_id
 
-    credentials_path = settings.firebase_credentials_path
+    credentials_json = getattr(settings, "firebase_credentials_json", None)
     try:
-        if credentials_path and Path(credentials_path).exists():
-            print(f"Initializing Firebase with credentials: {credentials_path}")
-            cred = credentials.Certificate(credentials_path)
-            firebase_app = firebase_admin.initialize_app(cred, options or None)
-        else:
+        # If a JSON string is provided (useful when stored in secrets), prefer it
+        if credentials_json:
+            try:
+                import json
+
+                cred_dict = json.loads(credentials_json)
+                print("Initializing Firebase with credentials from JSON string")
+                cred = credentials.Certificate(cred_dict)
+                firebase_app = firebase_admin.initialize_app(cred, options or None)
+            except Exception as e:
+                print(f"Failed to initialize from JSON credentials: {e}")
+                # fall through to try file path or default
+        if not firebase_app:
             print("Initializing Firebase with default credentials")
             firebase_app = firebase_admin.initialize_app(options=options or None)
         

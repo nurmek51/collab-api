@@ -6,7 +6,9 @@ from pydantic import ConfigDict
 class Settings(BaseSettings):
     firebase_project_id: str = "your-firebase-project-id"
     firebase_api_key: str = "your-firebase-api-key"
-    firebase_credentials_path: Optional[str] = None
+    # Provide Firebase service account credentials as a JSON string (useful when storing credentials in Secrets).
+    # Example env var: FIREBASE_CREDENTIALS_JSON='{"type": "service_account", ... }'
+    firebase_credentials_json: Optional[str] = None
     secret_key: str
     access_token_expire_minutes: int = 1440
     admin_phone: str
