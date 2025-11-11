@@ -34,7 +34,6 @@ async def test_freelancer_creation_and_approval_flow(client: AsyncClient):
             {"specialization": "Python Development", "skill_level": "senior"},
             {"specialization": "React Development", "skill_level": "middle"}
         ],
-        "experience_description": "5 years of experience in full-stack development",
         "phone_number": "+1234567891",
         "bio": "Experienced developer"
     }

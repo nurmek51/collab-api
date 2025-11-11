@@ -142,7 +142,6 @@ class FreelancerService:
             city=freelancer.city,
             email=freelancer.email,
             specializations_with_levels=specializations,
-            experience_description=freelancer.experience_description or "",
             name=user.name or "",
             surname=user.surname or "",
             phone_number=user.phone_number,

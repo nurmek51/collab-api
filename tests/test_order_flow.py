@@ -87,7 +87,6 @@ async def test_order_creation_and_application_flow(client: AsyncClient):
         "specializations_with_levels": [
             {"specialization": "Python Development", "skill_level": "senior"}
         ],
-        "experience_description": "Senior Python developer",
         "phone_number": "+1234567893"
     }
     

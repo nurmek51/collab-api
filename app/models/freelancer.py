@@ -22,7 +22,6 @@ class Freelancer(TimestampedModel):
     city: str
     email: str
     specializations_with_levels: List[Dict[str, str]] = Field(default_factory=list)
-    experience_description: Optional[str] = None
     status: FreelancerStatus = FreelancerStatus.PENDING
     payment_info: Dict[str, str] = Field(default_factory=dict)
     social_links: Dict[str, str] = Field(default_factory=dict)
@@ -54,7 +53,6 @@ class Freelancer(TimestampedModel):
             city=payload.get("city", ""),
             email=payload.get("email", ""),
             specializations_with_levels=list(payload.get("specializations_with_levels", [])),
-            experience_description=payload.get("experience_description"),
             status=FreelancerStatus(payload.get("status", FreelancerStatus.PENDING.value)),
             payment_info=payload.get("payment_info") or {},
             social_links=payload.get("social_links") or {},

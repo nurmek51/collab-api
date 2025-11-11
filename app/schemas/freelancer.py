@@ -35,7 +35,6 @@ class FreelancerBase(BaseModel):
     city: str = Field(..., min_length=1, max_length=100)
     email: EmailStr
     specializations_with_levels: List[Specialization]
-    experience_description: str = Field(..., min_length=1)
 
 
 class FreelancerCreate(FreelancerBase):
@@ -54,7 +53,6 @@ class FreelancerUpdate(BaseModel):
     city: Optional[str] = Field(None, min_length=1, max_length=100)
     email: Optional[EmailStr] = None
     specializations_with_levels: Optional[List[Specialization]] = None
-    experience_description: Optional[str] = Field(None, min_length=1)
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     surname: Optional[str] = Field(None, min_length=1, max_length=100)
     phone_number: Optional[str] = Field(None, pattern=r'^\+?[1-9]\d{1,14}$')
@@ -72,7 +70,6 @@ class FreelancerResponse(BaseModel):
     city: str
     email: str
     specializations_with_levels: List[Specialization]
-    experience_description: str
     name: str
     surname: str
     phone_number: Optional[str]

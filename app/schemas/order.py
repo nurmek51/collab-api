@@ -52,7 +52,8 @@ class OrderSpecialization(BaseModel):
     skill_level: SkillLevel
     conditions: Optional[OrderCondition] = None
     requirements: Optional[str] = None
-    vacancy_id: uuid.UUID  # Unique identifier for the vacancy - MUST be provided and never changes
+    # Unique identifier for the vacancy - server will generate one if not provided by the client
+    vacancy_id: Optional[uuid.UUID] = Field(default_factory=uuid.uuid4)
     is_occupied: bool = Field(default=False)  # Track if specialization is taken
     occupied_by_freelancer_id: Optional[uuid.UUID] = None  # Reference to freelancer who occupied this specialization
 

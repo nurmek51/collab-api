@@ -172,7 +172,6 @@ async def create_test_data():
             {"specialization": "React", "level": "Middle"},
             {"specialization": "DevOps", "level": "Middle"}
         ],
-        "experience_description": "Over 5 years of experience in full-stack development, specializing in Python backend and React frontend. Strong background in DevOps practices and cloud infrastructure.",
         "status": "approved",
         "payment_info": {
             "bank_name": "Kaspi Bank",

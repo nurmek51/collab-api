@@ -2,3 +2,4 @@ serviceAccountKey.json
 .env
 venv/
 .pytest_cache/
+.DS_Store

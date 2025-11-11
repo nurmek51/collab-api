@@ -87,8 +87,7 @@ class TestSerialization:
             email="test@example.com",
             specializations_with_levels=[
                 Specialization(specialization="fullstack", skill_level="junior")
-            ],
-            experience_description="Test experience"
+            ]
         )
         
         result = prepare_model_data_for_db(freelancer_data)
@@ -160,15 +159,13 @@ class TestSerialization:
         from app.schemas.freelancer import FreelancerUpdate
         
         update_data = FreelancerUpdate(
-            city="New City",
-            experience_description="Updated experience"
+            city="New City"
         )
         
         result = safe_model_dump(update_data, exclude_unset=True)
         
         assert isinstance(result, dict)
         assert result["city"] == "New City"
-        assert result["experience_description"] == "Updated experience"
         assert "iin" not in result  # Should be excluded as it's unset
         assert "email" not in result  # Should be excluded as it's unset
 

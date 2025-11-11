@@ -29,7 +29,6 @@ async def test_create_freelancer_profile_serialization(client: AsyncClient):
             {"specialization": "fullstack", "skill_level": "junior"},
             {"specialization": "backend", "skill_level": "middle"},
         ],
-        "experience_description": "Experienced developer",
         "payment_info": {"bank_account": "1234567890", "payment_method": "bank_transfer"},
         "social_links": {"linkedin": "https://linkedin.com/in/test"},
         "portfolio_links": {"portfolio": "https://portfolio.com"},
@@ -58,7 +57,6 @@ async def test_duplicate_freelancer_email_rejected(client: AsyncClient):
         "specializations_with_levels": [
             {"specialization": "design", "skill_level": "middle"}
         ],
-        "experience_description": "Design experience",
     }
 
     create_response = await client.post("/freelancers/profile", json=payload, headers=first_headers)
