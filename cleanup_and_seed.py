@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import uuid
 from app.config.firebase import initialize_firebase
 from app.datastore.firestore import get_firestore_store
@@ -10,6 +11,13 @@ from app.repositories.freelancer import FreelancerRepository
 from app.repositories.order_application import OrderApplicationRepository
 from app.services.order import OrderService
 from app.schemas.order import OrderCreate, OrderCondition, OrderSpecialization
+
+
+def generate_vacancy_id(spec: dict) -> str:
+    """Generate a deterministic vacancy_id based on specialization content."""
+    key_fields = {k: v for k, v in spec.items() if k in ['specialization', 'skill_level', 'conditions', 'requirements']}
+    key_str = str(sorted(key_fields.items()))
+    return str(uuid.UUID(hashlib.md5(key_str.encode('utf-8')).hexdigest()))
 
 
 async def cleanup_database():
@@ -106,31 +114,40 @@ async def create_test_data():
         
         specializations = []
         if i <= 2:  # Only first 2 orders have specializations
+            spec1 = {
+                "specialization": "Python Developer",
+                "skill_level": "middle" if i == 1 else "senior" if i == 2 else "junior",
+                "requirements": f"Python development experience for project {i}",
+            }
+            spec2 = {
+                "specialization": "React Developer", 
+                "skill_level": "middle",
+                "requirements": f"Frontend development with React for project {i}",
+            }
             specializations = [
                 OrderSpecialization(
-                    specialization="Python Developer",
-                    skill_level="middle" if i == 1 else "senior" if i == 2 else "junior",
-                    requirements=f"Python development experience for project {i}",
-                    vacancy_id=uuid.uuid4(),
+                    **spec1,
+                    vacancy_id=generate_vacancy_id(spec1),
                     is_occupied=False,
                     occupied_by_freelancer_id=None
                 ),
                 OrderSpecialization(
-                    specialization="React Developer", 
-                    skill_level="middle",
-                    requirements=f"Frontend development with React for project {i}",
-                    vacancy_id=uuid.uuid4(),
+                    **spec2,
+                    vacancy_id=generate_vacancy_id(spec2),
                     is_occupied=False,
                     occupied_by_freelancer_id=None
                 )
             ]
         else:
+            spec3 = {
+                "specialization": "DevOps Engineer",
+                "skill_level": "senior",
+                "requirements": f"DevOps and infrastructure experience for project {i}",
+            }
             specializations = [
                 OrderSpecialization(
-                    specialization="DevOps Engineer",
-                    skill_level="senior",
-                    requirements=f"DevOps and infrastructure experience for project {i}",
-                    vacancy_id=uuid.uuid4(),
+                    **spec3,
+                    vacancy_id=generate_vacancy_id(spec3),
                     is_occupied=False,
                     occupied_by_freelancer_id=None
                 )
