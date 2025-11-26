@@ -1,6 +1,5 @@
 from typing import List, Optional
 
-import hashlib
 import uuid
 
 from ..exceptions import BadRequestException, NotFoundException
@@ -37,12 +36,6 @@ class OrderService:
         self.user_repo = user_repo or UserRepository()
         self.application_repo = application_repo or OrderApplicationRepository()
 
-    def _generate_vacancy_id(self, spec: dict) -> str:
-        """Generate a deterministic vacancy_id based on specialization content."""
-        key_fields = {k: v for k, v in spec.items() if k in ['specialization', 'skill_level', 'conditions', 'requirements']}
-        key_str = str(sorted(key_fields.items()))
-        return str(uuid.UUID(hashlib.md5(key_str.encode('utf-8')).hexdigest()))
-
     async def create_order(self, user_id: uuid.UUID, order_data: OrderCreate) -> OrderResponse:
         await self._ensure_user_profile(user_id, order_data.name, order_data.surname)
         client = await self._ensure_client_profile(user_id)
@@ -60,12 +53,15 @@ class OrderService:
         order_payload["company_id"] = str(company.company_id)
 
         # Initialize specializations with proper structure if they exist
+        # Generate vacancy_id ONCE here - it will be saved to DB and never regenerated
         if order_payload.get("order_specializations"):
             for spec in order_payload["order_specializations"]:
                 if isinstance(spec, dict):
-                    # Ensure each specialization has required fields for vacancy management
-                    if "vacancy_id" not in spec:
-                        spec["vacancy_id"] = self._generate_vacancy_id(spec)
+                    # Generate unique vacancy_id for each specialization - saved to DB
+                    if "vacancy_id" not in spec or spec["vacancy_id"] is None:
+                        spec["vacancy_id"] = str(uuid.uuid4())
+                    elif not isinstance(spec["vacancy_id"], str):
+                        spec["vacancy_id"] = str(spec["vacancy_id"])
                     if "is_occupied" not in spec:
                         spec["is_occupied"] = False
                     if "occupied_by_freelancer_id" not in spec:
@@ -151,9 +147,9 @@ class OrderService:
                         if idx in existing_vacancy_ids:
                             # Preserve existing vacancy_id
                             spec["vacancy_id"] = existing_vacancy_ids[idx]
-                        elif "vacancy_id" not in spec:
-                            # Generate new vacancy_id only if not provided and no existing one
-                            spec["vacancy_id"] = self._generate_vacancy_id(spec)
+                        elif "vacancy_id" not in spec or spec["vacancy_id"] is None:
+                            # Generate new vacancy_id only for truly new specializations
+                            spec["vacancy_id"] = str(uuid.uuid4())
                         # Ensure occupation fields are present
                         if "is_occupied" not in spec:
                             spec["is_occupied"] = False
@@ -167,6 +163,19 @@ class OrderService:
 
     async def complete_order(self, order_id: uuid.UUID, order_update: OrderUpdate) -> OrderResponse:
         payload = safe_model_dump(order_update, exclude_unset=True)
+
+        # Generate vacancy_id for any specializations that don't have one
+        if payload.get("order_specializations"):
+            for spec in payload["order_specializations"]:
+                if isinstance(spec, dict):
+                    if "vacancy_id" not in spec or spec["vacancy_id"] is None:
+                        spec["vacancy_id"] = str(uuid.uuid4())
+                    elif not isinstance(spec["vacancy_id"], str):
+                        spec["vacancy_id"] = str(spec["vacancy_id"])
+                    if "is_occupied" not in spec:
+                        spec["is_occupied"] = False
+                    if "occupied_by_freelancer_id" not in spec:
+                        spec["occupied_by_freelancer_id"] = None
 
         payload["order_status"] = OrderStatus.APPROVED.value
         order = await self.order_repo.update(order_id, payload)
@@ -339,11 +348,12 @@ class OrderService:
             for spec in specializations:
                 # Handle UUID field conversions from string to UUID if needed
                 spec_copy = spec.copy()
-                if "vacancy_id" in spec_copy and isinstance(spec_copy["vacancy_id"], str):
-                    spec_copy["vacancy_id"] = uuid.UUID(spec_copy["vacancy_id"])
-                elif "vacancy_id" not in spec_copy or spec_copy["vacancy_id"] is None:
-                    # Generate vacancy_id if missing (for backward compatibility with existing data)
-                    spec_copy["vacancy_id"] = self._generate_vacancy_id(spec_copy)
+                if "vacancy_id" in spec_copy and spec_copy["vacancy_id"] is not None:
+                    if isinstance(spec_copy["vacancy_id"], str):
+                        spec_copy["vacancy_id"] = uuid.UUID(spec_copy["vacancy_id"])
+                    # else it's already a UUID, keep it
+                # If vacancy_id is missing, leave it as None - it should have been set at creation
+                # This preserves data integrity - we don't generate IDs on read
                 if "occupied_by_freelancer_id" in spec_copy and spec_copy["occupied_by_freelancer_id"] is not None and isinstance(spec_copy["occupied_by_freelancer_id"], str):
                     spec_copy["occupied_by_freelancer_id"] = uuid.UUID(spec_copy["occupied_by_freelancer_id"])
                 deserialized_specs.append(OrderSpecialization(**spec_copy))
