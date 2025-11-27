@@ -13,6 +13,7 @@ from .base import TimestampedModel
 class FreelancerStatus(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
+    REJECTED = "rejected"
 
 
 class Freelancer(TimestampedModel):

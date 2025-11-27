@@ -14,6 +14,7 @@ class SkillLevel(str, Enum):
 class FreelancerStatus(str, Enum):
     pending = "pending"
     approved = "approved"
+    rejected = "rejected"
 
 
 class Specialization(BaseModel):
