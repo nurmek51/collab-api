@@ -92,7 +92,7 @@ async def test_create_order_with_nested_payload(client: AsyncClient):
         },
         "requirements": "React, Node.js",
         "chat_link": "https://t.me/project_chat",
-        "contracts": {"contract_type": "employment", "duration_months": 12},
+        "contracts": [{"title": "Employment Contract", "contract_type": "employment", "duration_months": 12}],
         "order_specializations": [
             {"specialization": "fullstack", "skill_level": "senior", "vacancy_id": "550e8400-e29b-41d4-a716-446655440000"},
             {"specialization": "frontend", "skill_level": "middle", "vacancy_id": "550e8400-e29b-41d4-a716-446655440001"},
@@ -108,7 +108,9 @@ async def test_create_order_with_nested_payload(client: AsyncClient):
     data = response.json()["data"]
     assert data["order_title"] == "E-commerce Development"
     assert data["order_condition"]["schedule_type"] == "full-time"
-    assert data["contracts"]["duration_months"] == 12
+    assert isinstance(data["contracts"], list)
+    assert len(data["contracts"]) == 1
+    assert data["contracts"][0]["duration_months"] == 12
     specializations = data["order_specializations"]
     assert isinstance(specializations, list)
     assert {spec["specialization"] for spec in specializations} == {"fullstack", "frontend"}

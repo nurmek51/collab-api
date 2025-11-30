@@ -31,7 +31,7 @@ class Order(TimestampedModel):
     chat_link: Optional[str] = None
     requirements: Optional[str] = None
     order_condition: Optional[Dict[str, Any]] = None
-    contracts: Optional[Dict[str, Any]] = None
+    contracts: Optional[List[Dict[str, Any]]] = None
     order_specializations: Optional[List[Dict[str, Any]]] = None
 
     def to_firestore(self) -> dict:
@@ -52,6 +52,11 @@ class Order(TimestampedModel):
             created = datetime.fromisoformat(created)
         if isinstance(updated, str):
             updated = datetime.fromisoformat(updated)
+        
+        contracts = payload.get("contracts")
+        if isinstance(contracts, dict):
+            contracts = [contracts]  # Backward compatibility: convert old dict to list
+        
         return cls(
             order_id=uuid.UUID(str(payload["order_id"])),
             order_description=payload.get("order_description", ""),
@@ -62,7 +67,7 @@ class Order(TimestampedModel):
             chat_link=payload.get("chat_link"),
             requirements=payload.get("requirements"),
             order_condition=payload.get("order_condition"),
-            contracts=payload.get("contracts"),
+            contracts=contracts,
             order_specializations=payload.get("order_specializations"),
             created_at=created or datetime.utcnow(),
             updated_at=updated or datetime.utcnow(),

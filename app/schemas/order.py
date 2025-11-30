@@ -64,7 +64,7 @@ class OrderBase(BaseModel):
     chat_link: Optional[str] = Field(None, max_length=500)
     requirements: Optional[str] = Field(None, min_length=1)
     order_condition: Optional[OrderCondition] = None
-    contracts: Optional[Dict[str, Any]] = None
+    contracts: Optional[List[Dict[str, Any]]] = None
     order_specializations: Optional[List[OrderSpecialization]] = None
 
 
