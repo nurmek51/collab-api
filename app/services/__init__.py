@@ -7,3 +7,4 @@ from .order import OrderService
 from .order_application import OrderApplicationService
 from .admin_help import AdminHelpService
 from .notification import NotificationService
+from .twilio import TwilioService

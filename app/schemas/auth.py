@@ -8,7 +8,7 @@ class OTPRequest(BaseModel):
 
 class OTPVerification(BaseModel):
     phone_number: str = Field(..., pattern=r'^\+?[1-9]\d{1,14}$')
-    code: str = Field(..., min_length=4, max_length=4)
+    code: str = Field(..., min_length=4, max_length=6)
     firebase_token: Optional[str] = None
 
 

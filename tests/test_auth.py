@@ -1,8 +1,17 @@
 import pytest
 from httpx import AsyncClient
+from unittest.mock import patch, AsyncMock
+
+@pytest.fixture
+def mock_twilio():
+    with patch("app.services.auth.TwilioService") as mock:
+        instance = mock.return_value
+        instance.send_otp = AsyncMock(return_value=True)
+        instance.verify_otp = AsyncMock(return_value=True)
+        yield instance
 
 @pytest.mark.asyncio
-async def test_request_otp(client: AsyncClient):
+async def test_request_otp(client: AsyncClient, mock_twilio):
     response = await client.post("/auth/request-otp", json={
         "phone_number": "+1234567890"
     })
@@ -11,7 +20,7 @@ async def test_request_otp(client: AsyncClient):
     assert data["success"] is True
 
 @pytest.mark.asyncio
-async def test_verify_otp_success(client: AsyncClient):
+async def test_verify_otp_success(client: AsyncClient, mock_twilio):
     response = await client.post("/auth/verify-otp", json={
         "phone_number": "+1234567890",
         "code": "1234"
@@ -22,7 +31,8 @@ async def test_verify_otp_success(client: AsyncClient):
     assert "access_token" in data["data"]
 
 @pytest.mark.asyncio
-async def test_verify_otp_failure(client: AsyncClient):
+async def test_verify_otp_failure(client: AsyncClient, mock_twilio):
+    mock_twilio.verify_otp.return_value = False
     response = await client.post("/auth/verify-otp", json={
         "phone_number": "+1234567890",
         "code": "0000"
@@ -37,7 +47,7 @@ async def test_select_role_unauthorized(client: AsyncClient):
     assert response.status_code == 403
 
 @pytest.mark.asyncio
-async def test_full_auth_flow(client: AsyncClient):
+async def test_full_auth_flow(client: AsyncClient, mock_twilio):
     # Verify OTP and get token
     response = await client.post("/auth/verify-otp", json={
         "phone_number": "+1234567890",

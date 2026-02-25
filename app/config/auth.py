@@ -24,7 +24,3 @@ def verify_token(token: str):
         return payload
     except jwt.PyJWTError:
         return None
-
-
-def verify_otp(code: str) -> bool:
-    return code == "1234"

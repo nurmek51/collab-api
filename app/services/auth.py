@@ -2,8 +2,9 @@ from typing import Optional
 import structlog
 
 from ..repositories.user import UserRepository
-from ..config.auth import verify_otp, create_access_token
+from ..config.auth import create_access_token
 from ..config.firebase import verify_firebase_token
+from .twilio import TwilioService
 from ..schemas.auth import OTPVerification, TokenResponse
 from ..exceptions import BadRequestException
 
@@ -11,13 +12,19 @@ logger = structlog.get_logger()
 
 
 class AuthService:
-    def __init__(self, user_repo: Optional[UserRepository] = None):
+    def __init__(self, user_repo: Optional[UserRepository] = None, twilio_service: Optional[TwilioService] = None):
         self.user_repo = user_repo or UserRepository()
+        self.twilio_service = twilio_service or TwilioService()
 
     async def request_otp(self, phone_number: str) -> dict:
         logger.info("OTP requested", phone_number=phone_number)
-        # In a real implementation, this would send OTP via SMS
-        return {"message": "OTP sent successfully", "otp": "1234"}  # For development only
+        
+        success = await self.twilio_service.send_otp(phone_number)
+        if not success:
+            logger.error("Twilio failed to send OTP", phone_number=phone_number)
+            raise BadRequestException("Failed to send OTP. Please try again.")
+            
+        return {"message": "OTP sent successfully"}
 
     async def verify_otp_and_login(self, verification: OTPVerification) -> TokenResponse:
         logger.info("Verifying OTP and logging in", phone_number=verification.phone_number)
@@ -40,8 +47,8 @@ class AuthService:
         
         # If firebase not used or invalid, verify OTP
         if not firebase_user:
-            logger.info("Verifying OTP code")
-            if not verify_otp(verification.code):
+            logger.info("Verifying OTP code with Twilio")
+            if not await self.twilio_service.verify_otp(phone_number, verification.code):
                 logger.warning("Invalid OTP code provided", phone_number=phone_number)
                 raise BadRequestException("Invalid OTP code")
             logger.info("OTP code verified successfully")
