@@ -21,9 +21,9 @@ class Settings(BaseSettings):
     admin_surname: str
     
     # Twilio Configuration
-    twilio_account_sid: str 
-    twilio_auth_token: str 
-    twilio_verify_service_sid: str
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_verify_service_sid: Optional[str] = None
     
     environment: str = "development"
     log_level: str = "INFO"

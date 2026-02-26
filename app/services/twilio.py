@@ -6,10 +6,19 @@ logger = structlog.get_logger()
 
 class TwilioService:
     def __init__(self):
-        self.client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
-        self.service_sid = settings.twilio_verify_service_sid
+        if settings.twilio_account_sid and settings.twilio_auth_token and settings.twilio_verify_service_sid:
+            self.client = Client(settings.twilio_account_sid, settings.twilio_auth_token)
+            self.service_sid = settings.twilio_verify_service_sid
+        else:
+            self.client = None
+            self.service_sid = None
+            logger.warning("Twilio credentials missing. OTP service will not function.")
 
     async def send_otp(self, phone_number: str) -> bool:
+        if not self.client or not self.service_sid:
+            logger.error("Twilio not configured", phone_number=phone_number)
+            return False
+
         try:
             # Try sending via WhatsApp first
             logger.info("Sending Twilio OTP via WhatsApp", phone_number=phone_number)
@@ -39,6 +48,10 @@ class TwilioService:
                 return False
 
     async def verify_otp(self, phone_number: str, code: str) -> bool:
+        if not self.client or not self.service_sid:
+            logger.error("Twilio not configured for verification", phone_number=phone_number)
+            return False
+
         try:
             logger.info("Verifying Twilio OTP", phone_number=phone_number)
             verification_check = self.client.verify.v2.services(self.service_sid) \
