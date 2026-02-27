@@ -2,14 +2,6 @@ import pytest
 from httpx import AsyncClient
 from unittest.mock import patch, AsyncMock
 
-@pytest.fixture
-def mock_twilio():
-    with patch("app.services.auth.TwilioService") as mock:
-        instance = mock.return_value
-        instance.send_otp = AsyncMock(return_value=True)
-        instance.verify_otp = AsyncMock(return_value=True)
-        yield instance
-
 @pytest.mark.asyncio
 async def test_request_otp(client: AsyncClient, mock_twilio):
     response = await client.post("/auth/request-otp", json={
