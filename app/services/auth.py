@@ -1,12 +1,14 @@
 from typing import Optional
+import uuid
 import structlog
 
 from ..repositories.user import UserRepository
-from ..config.auth import create_access_token
+from ..config.auth import create_access_token, create_refresh_token, verify_token
 from ..config.firebase import verify_firebase_token
 from .twilio import TwilioService
 from ..schemas.auth import OTPVerification, TokenResponse
 from ..exceptions import BadRequestException
+from ..config.settings import settings
 
 logger = structlog.get_logger()
 
@@ -75,11 +77,52 @@ class AuthService:
         # Create access token
         try:
             access_token = create_access_token({"sub": str(user.user_id)})
-            logger.info("Access token created successfully", user_id=str(user.user_id))
+            refresh_token = create_refresh_token({"sub": str(user.user_id)})
+            logger.info("Access and refresh tokens created successfully", user_id=str(user.user_id))
             return TokenResponse(
                 access_token=access_token,
-                expires_in=1440 * 60
+                refresh_token=refresh_token,
+                expires_in=settings.access_token_expire_minutes * 60,
+                refresh_expires_in=settings.refresh_token_expire_minutes * 60,
             )
         except Exception as e:
             logger.error("Error creating access token", error=str(e))
             raise BadRequestException(f"Token creation failed: {str(e)}")
+
+    async def refresh_access_token(self, refresh_token: str) -> TokenResponse:
+        logger.info("Refreshing access token")
+
+        payload = verify_token(refresh_token, expected_type="refresh")
+        if payload is None:
+            logger.warning("Invalid refresh token provided")
+            raise BadRequestException("Invalid refresh token")
+
+        user_id = payload.get("sub")
+        if not user_id:
+            logger.warning("Refresh token has no subject")
+            raise BadRequestException("Invalid refresh token")
+
+        try:
+            user_uuid = uuid.UUID(str(user_id))
+        except ValueError as exc:
+            logger.warning("Refresh token subject is not UUID", user_id=str(user_id))
+            raise BadRequestException("Invalid refresh token") from exc
+
+        user = await self.user_repo.get_by_id(user_uuid)
+        if not user:
+            logger.warning("User not found for refresh token", user_id=str(user_id))
+            raise BadRequestException("User not found")
+
+        try:
+            new_access_token = create_access_token({"sub": str(user.user_id)})
+            new_refresh_token = create_refresh_token({"sub": str(user.user_id)})
+            logger.info("Token refresh successful", user_id=str(user.user_id))
+            return TokenResponse(
+                access_token=new_access_token,
+                refresh_token=new_refresh_token,
+                expires_in=settings.access_token_expire_minutes * 60,
+                refresh_expires_in=settings.refresh_token_expire_minutes * 60,
+            )
+        except Exception as e:
+            logger.error("Error refreshing tokens", error=str(e))
+            raise BadRequestException(f"Token refresh failed: {str(e)}")

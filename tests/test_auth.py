@@ -21,6 +21,7 @@ async def test_verify_otp_success(client: AsyncClient, mock_twilio):
     data = response.json()
     assert data["success"] is True
     assert "access_token" in data["data"]
+    assert "refresh_token" in data["data"]
 
 @pytest.mark.asyncio
 async def test_verify_otp_failure(client: AsyncClient, mock_twilio):
@@ -57,3 +58,39 @@ async def test_full_auth_flow(client: AsyncClient, mock_twilio):
     assert response.status_code == 200
     data = response.json()
     assert data["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_refresh_success(client: AsyncClient, mock_twilio):
+    login_response = await client.post("/auth/verify-otp", json={
+        "phone_number": "+1234567890",
+        "code": "1234"
+    })
+    assert login_response.status_code == 200
+    login_data = login_response.json()["data"]
+
+    refresh_response = await client.post("/auth/refresh", json={
+        "refresh_token": login_data["refresh_token"]
+    })
+    assert refresh_response.status_code == 200
+    refresh_data = refresh_response.json()["data"]
+
+    assert "access_token" in refresh_data
+    assert "refresh_token" in refresh_data
+    assert refresh_data["access_token"] != login_data["access_token"]
+    assert refresh_data["refresh_token"] != login_data["refresh_token"]
+
+
+@pytest.mark.asyncio
+async def test_refresh_failure_with_access_token(client: AsyncClient, mock_twilio):
+    login_response = await client.post("/auth/verify-otp", json={
+        "phone_number": "+1234567890",
+        "code": "1234"
+    })
+    assert login_response.status_code == 200
+    access_token = login_response.json()["data"]["access_token"]
+
+    refresh_response = await client.post("/auth/refresh", json={
+        "refresh_token": access_token
+    })
+    assert refresh_response.status_code == 400

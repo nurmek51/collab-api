@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     firebase_credentials_json: Optional[str] = None
     secret_key: str
     access_token_expire_minutes: int = 1440
+    refresh_token_expire_minutes: int = 43200
     admin_phone: str
     admin_name: str
     admin_surname: str

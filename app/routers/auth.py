@@ -3,7 +3,7 @@ import structlog
 
 from ..deps.auth import get_current_user
 from ..models.user import User
-from ..schemas.auth import OTPRequest, OTPVerification, RoleSelection
+from ..schemas.auth import OTPRequest, OTPVerification, RoleSelection, RefreshTokenRequest
 from ..schemas.common import APIResponse
 from ..services.auth import AuthService
 from ..services.user import UserService
@@ -46,6 +46,24 @@ async def verify_otp(
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error("Unexpected error in OTP verification", error=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.post("/refresh", response_model=APIResponse)
+async def refresh_tokens(
+    payload: RefreshTokenRequest,
+):
+    try:
+        logger.info("Token refresh request received")
+        auth_service = AuthService()
+        result = await auth_service.refresh_access_token(payload.refresh_token)
+        logger.info("Token refresh processed successfully")
+        return APIResponse(success=True, data=result.model_dump())
+    except BadRequestException as e:
+        logger.warning("Bad request in token refresh", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error("Unexpected error in token refresh", error=str(e))
         raise HTTPException(status_code=500, detail="Internal server error")
 
 

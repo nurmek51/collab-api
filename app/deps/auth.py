@@ -14,7 +14,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
 ) -> User:
     token = credentials.credentials
-    payload = verify_token(token)
+    payload = verify_token(token, expected_type="access")
     
     if payload is None:
         raise UnauthorizedException("Invalid token")

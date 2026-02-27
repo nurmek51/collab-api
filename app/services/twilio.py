@@ -1,4 +1,5 @@
 from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 from ..config.settings import settings
 import structlog
 
@@ -21,31 +22,53 @@ class TwilioService:
 
         try:
             # Try sending via WhatsApp first
-            logger.info("Sending Twilio OTP via WhatsApp", phone_number=phone_number)
+            logger.info(
+                "Attempting to send Twilio OTP via WhatsApp", 
+                phone_number=phone_number, 
+                service_sid=self.service_sid[:4] + "..." if self.service_sid else None
+            )
             verification = self.client.verify.v2.services(self.service_sid) \
                 .verifications \
-                .create(to=phone_number, channel='whatsapp')
-            logger.info("Twilio OTP sent via WhatsApp", status=verification.status, phone_number=phone_number)
+                .create(to=phone_number, channel='whatsapp', locale='en')
+                
+            logger.info("Twilio OTP successfully sent via WhatsApp", status=verification.status, phone_number=phone_number)
             return verification.status == "pending"
-        except Exception as e:
-            error_str = str(e)
-            logger.warning("WhatsApp OTP failed, attempting SMS fallback", error=error_str, phone_number=phone_number)
             
-            # Error 68008 is "WhatsApp channel not configured". 
-            # We fallback to SMS if WhatsApp fails for any reason to ensure user receives the code.
-            try:
-                logger.info("Sending Twilio OTP via SMS", phone_number=phone_number)
-                verification = self.client.verify.v2.services(self.service_sid) \
-                    .verifications \
-                    .create(to=phone_number, channel='sms')
-                logger.info("Twilio OTP sent via SMS", status=verification.status, phone_number=phone_number)
-                return verification.status == "pending"
-            except Exception as sms_error:
-                logger.error("Failed to send Twilio OTP via both WhatsApp and SMS", 
-                             whatsapp_error=error_str, 
-                             sms_error=str(sms_error), 
-                             phone_number=phone_number)
-                return False
+        except TwilioRestException as e:
+            # Enhanced logging for Twilio specific errors
+            logger.warning(
+                "Twilio WhatsApp OTP failed (TwilioRestException)", 
+                error_code=e.code,
+                error_msg=e.msg,
+                http_status=e.status,
+                phone_number=phone_number
+            )
+            
+            # Error 60200: Invalid parameter (e.g. invalid phone number format)
+            # Error 68008: WhatsApp channel not configured
+            # Continue to SMS fallback
+            
+        except Exception as e:
+            logger.warning(
+                "Twilio WhatsApp OTP failed (Generic Exception)", 
+                error=str(e), 
+                error_type=type(e).__name__,
+                phone_number=phone_number
+            )
+            
+        # Fallback to SMS
+        try:
+            logger.info("Attempting SMS fallback", phone_number=phone_number)
+            verification = self.client.verify.v2.services(self.service_sid) \
+                .verifications \
+                .create(to=phone_number, channel='sms')
+            logger.info("Twilio OTP sent via SMS", status=verification.status, phone_number=phone_number)
+            return verification.status == "pending"
+        except Exception as sms_error:
+            logger.error("Failed to send Twilio OTP via both WhatsApp and SMS", 
+                         sms_error=str(sms_error), 
+                         phone_number=phone_number)
+            return False
 
     async def verify_otp(self, phone_number: str, code: str) -> bool:
         if not self.client or not self.service_sid:
