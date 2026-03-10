@@ -21,6 +21,11 @@ class AuthService:
     async def request_otp(self, phone_number: str) -> dict:
         logger.info("OTP requested", phone_number=phone_number)
         
+        # Bypass Twilio if it's the admin phone number from .env
+        if phone_number == settings.admin_phone:
+            logger.info("Admin phone requested OTP. Bypassing Twilio for mock path.")
+            return {"message": "OTP sent successfully (mock mode)"}
+
         success = await self.twilio_service.send_otp(phone_number)
         if not success:
             logger.error("Twilio failed to send OTP", phone_number=phone_number)
@@ -50,7 +55,13 @@ class AuthService:
         # If firebase not used or invalid, verify OTP
         if not firebase_user:
             logger.info("Verifying OTP code with Twilio")
-            if not await self.twilio_service.verify_otp(phone_number, verification.code):
+            # Special case for admin phone from .env
+            is_admin_phone = phone_number == settings.admin_phone
+            is_mock_otp = verification.code == "123456"
+
+            if is_admin_phone and is_mock_otp:
+                logger.info("Admin mock OTP used", phone_number=phone_number)
+            elif not await self.twilio_service.verify_otp(phone_number, verification.code):
                 logger.warning("Invalid OTP code provided", phone_number=phone_number)
                 raise BadRequestException("Invalid OTP code")
             logger.info("OTP code verified successfully")
@@ -59,17 +70,28 @@ class AuthService:
         logger.info("Looking up user by phone", phone_number=phone_number)
         try:
             user = await self.user_repo.get_by_phone(phone_number)
+            
+            # Determine initial roles
+            initial_roles = []
+            if phone_number == settings.admin_phone:
+                initial_roles = ["admin"]
+
             if not user:
                 logger.info("Creating new user", phone_number=phone_number)
                 user_data = {
                     "phone_number": phone_number,
-                    "name": "",
-                    "surname": ""
+                    "name": settings.admin_name if phone_number == settings.admin_phone else "",
+                    "surname": settings.admin_surname if phone_number == settings.admin_phone else ""
                 }
-                user = await self.user_repo.create_with_roles(user_data, [])
-                logger.info("User created successfully", user_id=str(user.user_id))
+                user = await self.user_repo.create_with_roles(user_data, initial_roles)
+                logger.info("User created successfully", user_id=str(user.user_id), roles=initial_roles)
             else:
                 logger.info("Existing user found", user_id=str(user.user_id))
+                # Auto-assign admin role if phone matches and not already admin
+                if phone_number == settings.admin_phone and "admin" not in user.roles:
+                    logger.info("Assigning admin role to existing user", user_id=str(user.user_id))
+                    await self.user_repo.add_role(user.user_id, "admin")
+                    user = await self.user_repo.get_by_id(user.user_id)
         except Exception as e:
             logger.error("Error with user repository operations", error=str(e))
             raise BadRequestException(f"User operation failed: {str(e)}")
