@@ -29,6 +29,9 @@ class Freelancer(TimestampedModel):
     portfolio_links: Dict[str, str] = Field(default_factory=dict)
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
+    resume_storage_path: Optional[str] = None
+    resume_filename: Optional[str] = None
+    resume_uploaded_at: Optional[datetime] = None
 
     def to_firestore(self) -> dict:
         data = self.model_dump()
@@ -37,6 +40,8 @@ class Freelancer(TimestampedModel):
         data["status"] = self.status.value
         data["created_at"] = data["created_at"].isoformat()
         data["updated_at"] = data["updated_at"].isoformat()
+        if data.get("resume_uploaded_at"):
+            data["resume_uploaded_at"] = data["resume_uploaded_at"].isoformat()
         return data
 
     @classmethod
@@ -47,6 +52,9 @@ class Freelancer(TimestampedModel):
             created = datetime.fromisoformat(created)
         if isinstance(updated, str):
             updated = datetime.fromisoformat(updated)
+        resume_uploaded_at = payload.get("resume_uploaded_at")
+        if isinstance(resume_uploaded_at, str):
+            resume_uploaded_at = datetime.fromisoformat(resume_uploaded_at)
         return cls(
             freelancer_id=uuid.UUID(str(payload["freelancer_id"])),
             user_id=uuid.UUID(str(payload["user_id"])),
@@ -60,6 +68,9 @@ class Freelancer(TimestampedModel):
             portfolio_links=payload.get("portfolio_links") or {},
             avatar_url=payload.get("avatar_url"),
             bio=payload.get("bio"),
+            resume_storage_path=payload.get("resume_storage_path"),
+            resume_filename=payload.get("resume_filename"),
+            resume_uploaded_at=resume_uploaded_at,
             created_at=created or datetime.utcnow(),
             updated_at=updated or datetime.utcnow(),
         )

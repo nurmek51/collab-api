@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.config.settings import settings
+
 @pytest.mark.asyncio
 async def test_order_creation_and_application_flow(client: AsyncClient):
     # Step 1: Create client user
@@ -33,9 +35,9 @@ async def test_order_creation_and_application_flow(client: AsyncClient):
     order_id = data["data"]["order_id"]
     assert data["data"]["order_status"] == "pending"
     
-    # Step 3: Create admin and approve order
+    # Step 3: Login as admin and approve order
     admin_response = await client.post("/auth/verify-otp", json={
-        "phone_number": "+1234567899",
+        "phone_number": settings.admin_phone,
         "code": "1234"
     })
     admin_token = admin_response.json()["data"]["access_token"]
@@ -45,12 +47,6 @@ async def test_order_creation_and_application_flow(client: AsyncClient):
         "name": "Admin",
         "surname": "User"
     }, headers=admin_headers)
-    
-    admin_role_response = await client.post("/auth/select-role", json={
-        "role": "admin"
-    }, headers=admin_headers)
-    assert admin_role_response.status_code == 200
-    assert admin_role_response.json()["success"] is True
     
     # Complete order (approve)
     response = await client.post(f"/admin/orders/{order_id}/complete", json={

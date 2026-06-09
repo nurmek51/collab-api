@@ -3,6 +3,7 @@ from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List
 from ..config.auth import verify_token
+from ..config.settings import settings
 from ..models.user import User
 from ..exceptions import UnauthorizedException, ForbiddenException
 from ..repositories.user import UserRepository
@@ -53,8 +54,16 @@ def require_role(required_role: str):
     return role_checker
 
 
+def is_admin_user(user: User) -> bool:
+    return user.phone_number == settings.admin_phone
+
+
 def require_admin():
-    return require_role("admin")
+    async def admin_checker(user: User = Depends(get_current_user)) -> User:
+        if not is_admin_user(user):
+            raise ForbiddenException("Admin access required")
+        return user
+    return admin_checker
 
 
 def require_freelancer():

@@ -13,7 +13,6 @@ from .base import TimestampedModel
 class Role(str, enum.Enum):
     CLIENT = "client"
     FREELANCER = "freelancer"
-    ADMIN = "admin"
 
 
 class User(TimestampedModel):

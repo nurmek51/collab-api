@@ -189,6 +189,20 @@ async def approve_freelancer(
         return APIResponse(success=False, error=str(e))
 
 
+@router.get("/freelancers/{freelancer_id}/resume", response_model=APIResponse)
+async def get_freelancer_resume_download_url(
+    freelancer_id: uuid.UUID = Path(...),
+    current_user: User = Depends(require_admin()),
+):
+    """Get a temporary signed download URL for a freelancer's resume."""
+    try:
+        freelancer_service = FreelancerService()
+        resume = await freelancer_service.get_resume_download_url_for_freelancer(freelancer_id)
+        return APIResponse(success=True, data=resume)
+    except Exception as e:
+        return APIResponse(success=False, error=str(e))
+
+
 @router.get("/orders/pending", response_model=APIResponse)
 async def get_pending_orders(
     page: int = Query(1, ge=1),

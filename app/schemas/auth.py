@@ -36,4 +36,4 @@ class RefreshTokenRequest(BaseModel):
 
 
 class RoleSelection(BaseModel):
-    role: str = Field(..., pattern=r'^(client|freelancer|admin)$')
+    role: str = Field(..., pattern=r'^(client|freelancer)$')

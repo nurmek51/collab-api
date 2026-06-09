@@ -80,11 +80,26 @@ class FreelancerResponse(BaseModel):
     portfolio_links: Dict[str, Any] = Field(default_factory=dict)
     avatar_url: Optional[str]
     bio: Optional[str]
+    has_resume: bool = False
+    resume_filename: Optional[str] = None
+    resume_uploaded_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class ResumeUploadResponse(BaseModel):
+    has_resume: bool = True
+    resume_filename: str
+    resume_uploaded_at: datetime
+
+
+class ResumeDownloadResponse(BaseModel):
+    download_url: str
+    resume_filename: str
+    expires_in_seconds: int
 
 
 class FreelancerApproval(BaseModel):

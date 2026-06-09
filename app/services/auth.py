@@ -72,9 +72,7 @@ class AuthService:
             user = await self.user_repo.get_by_phone(phone_number)
             
             # Determine initial roles
-            initial_roles = []
-            if phone_number == settings.admin_phone:
-                initial_roles = ["admin"]
+            initial_roles: list[str] = []
 
             if not user:
                 logger.info("Creating new user", phone_number=phone_number)
@@ -87,11 +85,6 @@ class AuthService:
                 logger.info("User created successfully", user_id=str(user.user_id), roles=initial_roles)
             else:
                 logger.info("Existing user found", user_id=str(user.user_id))
-                # Auto-assign admin role if phone matches and not already admin
-                if phone_number == settings.admin_phone and "admin" not in user.roles:
-                    logger.info("Assigning admin role to existing user", user_id=str(user.user_id))
-                    await self.user_repo.add_role(user.user_id, "admin")
-                    user = await self.user_repo.get_by_id(user.user_id)
         except Exception as e:
             logger.error("Error with user repository operations", error=str(e))
             raise BadRequestException(f"User operation failed: {str(e)}")

@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 
+from app.config.settings import settings
+
 @pytest.mark.asyncio
 async def test_freelancer_creation_and_approval_flow(client: AsyncClient):
     # Step 1: Login and get token
@@ -54,25 +56,19 @@ async def test_freelancer_creation_and_approval_flow(client: AsyncClient):
         freelancer_id = data["data"]["freelancer_id"]
         assert data["data"]["status"] == "pending"
     
-    # Step 5: Create admin user and approve freelancer
+    # Step 5: Login as admin and approve freelancer
     admin_response = await client.post("/auth/verify-otp", json={
-        "phone_number": "+1234567899",
+        "phone_number": settings.admin_phone,
         "code": "1234"
     })
     admin_token = admin_response.json()["data"]["access_token"]
     admin_headers = {"Authorization": f"Bearer {admin_token}"}
     
-    # Update admin user info and role
+    # Update admin user info
     await client.put("/users/me", json={
         "name": "Admin",
         "surname": "User"
     }, headers=admin_headers)
-    
-    admin_role_response = await client.post("/auth/select-role", json={
-        "role": "admin"
-    }, headers=admin_headers)
-    assert admin_role_response.status_code == 200
-    assert admin_role_response.json()["success"] is True
     
     # Approve freelancer
     response = await client.put(f"/admin/freelancers/{freelancer_id}/approve", json={

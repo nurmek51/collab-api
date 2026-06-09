@@ -1,7 +1,7 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, File, Path, Query, UploadFile
 
 from ..deps.auth import get_current_user, require_freelancer
 from ..models.user import User
@@ -47,6 +47,52 @@ async def update_freelancer_profile(
         freelancer = await freelancer_service.get_freelancer_by_user_id(current_user.user_id)
         updated_freelancer = await freelancer_service.update_freelancer(freelancer.freelancer_id, freelancer_update)
         return APIResponse(success=True, data=updated_freelancer)
+    except Exception as e:
+        return APIResponse(success=False, error=str(e))
+
+
+@router.post("/profile/resume", response_model=APIResponse)
+async def upload_freelancer_resume(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload or replace the freelancer resume (PDF, DOC, DOCX, max 5 MB)."""
+    try:
+        content = await file.read()
+        freelancer_service = FreelancerService()
+        resume = await freelancer_service.upload_resume(
+            current_user.user_id,
+            content,
+            file.content_type,
+            file.filename,
+        )
+        return APIResponse(success=True, data=resume)
+    except Exception as e:
+        return APIResponse(success=False, error=str(e))
+
+
+@router.get("/profile/resume", response_model=APIResponse)
+async def get_my_freelancer_resume_download_url(
+    current_user: User = Depends(get_current_user),
+):
+    """Get a temporary signed download URL for the current freelancer's resume."""
+    try:
+        freelancer_service = FreelancerService()
+        resume = await freelancer_service.get_resume_download_url_for_user(current_user.user_id)
+        return APIResponse(success=True, data=resume)
+    except Exception as e:
+        return APIResponse(success=False, error=str(e))
+
+
+@router.delete("/profile/resume", response_model=APIResponse)
+async def delete_freelancer_resume(
+    current_user: User = Depends(get_current_user),
+):
+    """Delete the current freelancer's resume."""
+    try:
+        freelancer_service = FreelancerService()
+        await freelancer_service.delete_resume(current_user.user_id)
+        return APIResponse(success=True, data={"deleted": True})
     except Exception as e:
         return APIResponse(success=False, error=str(e))
 

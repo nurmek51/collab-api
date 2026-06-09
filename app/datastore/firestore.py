@@ -49,7 +49,11 @@ class InMemoryStore:
             docs = self._collections.setdefault(collection, {})
             if doc_id not in docs:
                 return None
-            docs[doc_id].update(data)
+            for key, value in data.items():
+                if value is None:
+                    docs[doc_id].pop(key, None)
+                else:
+                    docs[doc_id][key] = value
             return docs[doc_id].copy()
 
     async def delete_document(self, collection: str, doc_id: str) -> None:
@@ -153,7 +157,13 @@ class FirestoreStore:
             snapshot = doc_ref.get()
             if not snapshot.exists:
                 return None
-            doc_ref.update(data)
+            payload = {}
+            for key, value in data.items():
+                if value is None and admin_firestore is not None:
+                    payload[key] = admin_firestore.DELETE_FIELD
+                else:
+                    payload[key] = value
+            doc_ref.update(payload)
             new_snapshot = doc_ref.get()
             return new_snapshot.to_dict()
 
