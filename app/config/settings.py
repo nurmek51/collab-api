@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings
 from typing import Optional
-from pydantic import ConfigDict
+from pydantic import ConfigDict, computed_field
 
 
 class Settings(BaseSettings):
@@ -30,6 +30,15 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
 
     model_config = ConfigDict(env_file=".env", extra="ignore")
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def resolved_firebase_storage_bucket(self) -> Optional[str]:
+        if self.firebase_storage_bucket:
+            return self.firebase_storage_bucket
+        if self.firebase_project_id and self.firebase_project_id != "your-firebase-project-id":
+            return f"{self.firebase_project_id}.firebasestorage.app"
+        return None
 
 
 settings = Settings()

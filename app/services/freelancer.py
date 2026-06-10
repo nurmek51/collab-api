@@ -71,11 +71,14 @@ class FreelancerService:
         await self.user_repo.add_role(user_id, "freelancer")
 
         refreshed_user = await self.user_repo.get_by_id(user_id)
-        if refreshed_user and refreshed_user.resume_storage_path:
-            await self.freelancer_repo.update(
-                freelancer.freelancer_id,
-                self._resume_payload_from_user(refreshed_user),
-            )
+        if refreshed_user:
+            sync_payload = {}
+            if refreshed_user.resume_storage_path:
+                sync_payload.update(self._resume_payload_from_user(refreshed_user))
+            if refreshed_user.avatar_storage_path:
+                sync_payload.update(self._avatar_payload_from_user(refreshed_user))
+            if sync_payload:
+                await self.freelancer_repo.update(freelancer.freelancer_id, sync_payload)
 
         refreshed = await self.freelancer_repo.get_by_id(freelancer.freelancer_id)
         return await self._build_response(refreshed)
@@ -227,6 +230,18 @@ class FreelancerService:
         return await self._build_resume_download_response(storage_path, filename)
 
     @staticmethod
+    def _avatar_payload_from_user(user) -> dict:
+        payload = {"avatar_storage_path": user.avatar_storage_path}
+        if user.avatar_uploaded_at:
+            uploaded_at = user.avatar_uploaded_at
+            payload["avatar_uploaded_at"] = (
+                uploaded_at.isoformat()
+                if isinstance(uploaded_at, datetime)
+                else uploaded_at
+            )
+        return payload
+
+    @staticmethod
     def _resume_payload_from_user(user) -> dict:
         payload = {
             "resume_storage_path": user.resume_storage_path,
@@ -240,6 +255,14 @@ class FreelancerService:
                 else uploaded_at
             )
         return payload
+
+    @staticmethod
+    def _resolve_avatar_storage_path(user, freelancer) -> Optional[str]:
+        if freelancer and freelancer.avatar_storage_path:
+            return freelancer.avatar_storage_path
+        if user and user.avatar_storage_path:
+            return user.avatar_storage_path
+        return None
 
     @staticmethod
     def _resolve_resume_metadata(user, freelancer) -> tuple[Optional[str], Optional[str]]:
@@ -276,6 +299,8 @@ class FreelancerService:
         status = SchemaFreelancerStatus(freelancer.status.value)
         storage_path, filename = self._resolve_resume_metadata(user, freelancer)
         uploaded_at = freelancer.resume_uploaded_at or user.resume_uploaded_at
+        avatar_storage_path = self._resolve_avatar_storage_path(user, freelancer)
+        avatar_uploaded_at = freelancer.avatar_uploaded_at or user.avatar_uploaded_at
 
         return FreelancerResponse(
             freelancer_id=freelancer.freelancer_id,
@@ -292,6 +317,8 @@ class FreelancerService:
             social_links=freelancer.social_links,
             portfolio_links=freelancer.portfolio_links,
             avatar_url=freelancer.avatar_url,
+            has_avatar=bool(avatar_storage_path),
+            avatar_uploaded_at=avatar_uploaded_at,
             bio=freelancer.bio,
             has_resume=bool(storage_path),
             resume_filename=filename,

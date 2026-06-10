@@ -79,6 +79,8 @@ class FreelancerResponse(BaseModel):
     social_links: Dict[str, Any] = Field(default_factory=dict)
     portfolio_links: Dict[str, Any] = Field(default_factory=dict)
     avatar_url: Optional[str]
+    has_avatar: bool = False
+    avatar_uploaded_at: Optional[datetime] = None
     bio: Optional[str]
     has_resume: bool = False
     resume_filename: Optional[str] = None

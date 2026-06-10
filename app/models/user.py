@@ -24,6 +24,8 @@ class User(TimestampedModel):
     resume_storage_path: Optional[str] = None
     resume_filename: Optional[str] = None
     resume_uploaded_at: Optional[datetime] = None
+    avatar_storage_path: Optional[str] = None
+    avatar_uploaded_at: Optional[datetime] = None
 
     model_config = ConfigDict(use_enum_values=True, populate_by_name=True)
 
@@ -37,6 +39,8 @@ class User(TimestampedModel):
             data["updated_at"] = data["updated_at"].isoformat()
         if isinstance(data.get("resume_uploaded_at"), datetime):
             data["resume_uploaded_at"] = data["resume_uploaded_at"].isoformat()
+        if isinstance(data.get("avatar_uploaded_at"), datetime):
+            data["avatar_uploaded_at"] = data["avatar_uploaded_at"].isoformat()
         return data
 
     @classmethod
@@ -52,6 +56,9 @@ class User(TimestampedModel):
         resume_uploaded_at = payload.get("resume_uploaded_at")
         if isinstance(resume_uploaded_at, str):
             resume_uploaded_at = datetime.fromisoformat(resume_uploaded_at)
+        avatar_uploaded_at = payload.get("avatar_uploaded_at")
+        if isinstance(avatar_uploaded_at, str):
+            avatar_uploaded_at = datetime.fromisoformat(avatar_uploaded_at)
         return cls(
             user_id=uuid.UUID(str(payload["user_id"])),
             name=payload.get("name"),
@@ -61,6 +68,8 @@ class User(TimestampedModel):
             resume_storage_path=payload.get("resume_storage_path"),
             resume_filename=payload.get("resume_filename"),
             resume_uploaded_at=resume_uploaded_at,
+            avatar_storage_path=payload.get("avatar_storage_path"),
+            avatar_uploaded_at=avatar_uploaded_at,
             created_at=created or datetime.utcnow(),
             updated_at=updated or datetime.utcnow(),
         )

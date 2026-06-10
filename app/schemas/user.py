@@ -26,8 +26,20 @@ class UserResponse(BaseModel):
     surname: Optional[str]
     phone_number: Optional[str]
     roles: List[str]
+    has_avatar: bool = False
+    avatar_uploaded_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 
     class Config:
         from_attributes = True
+
+
+class AvatarUploadResponse(BaseModel):
+    has_avatar: bool = True
+    avatar_uploaded_at: datetime
+
+
+class AvatarDownloadResponse(BaseModel):
+    download_url: str
+    expires_in_seconds: int

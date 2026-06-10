@@ -28,6 +28,8 @@ class Freelancer(TimestampedModel):
     social_links: Dict[str, str] = Field(default_factory=dict)
     portfolio_links: Dict[str, str] = Field(default_factory=dict)
     avatar_url: Optional[str] = None
+    avatar_storage_path: Optional[str] = None
+    avatar_uploaded_at: Optional[datetime] = None
     bio: Optional[str] = None
     resume_storage_path: Optional[str] = None
     resume_filename: Optional[str] = None
@@ -42,6 +44,8 @@ class Freelancer(TimestampedModel):
         data["updated_at"] = data["updated_at"].isoformat()
         if data.get("resume_uploaded_at"):
             data["resume_uploaded_at"] = data["resume_uploaded_at"].isoformat()
+        if data.get("avatar_uploaded_at"):
+            data["avatar_uploaded_at"] = data["avatar_uploaded_at"].isoformat()
         return data
 
     @classmethod
@@ -55,6 +59,9 @@ class Freelancer(TimestampedModel):
         resume_uploaded_at = payload.get("resume_uploaded_at")
         if isinstance(resume_uploaded_at, str):
             resume_uploaded_at = datetime.fromisoformat(resume_uploaded_at)
+        avatar_uploaded_at = payload.get("avatar_uploaded_at")
+        if isinstance(avatar_uploaded_at, str):
+            avatar_uploaded_at = datetime.fromisoformat(avatar_uploaded_at)
         return cls(
             freelancer_id=uuid.UUID(str(payload["freelancer_id"])),
             user_id=uuid.UUID(str(payload["user_id"])),
@@ -67,6 +74,8 @@ class Freelancer(TimestampedModel):
             social_links=payload.get("social_links") or {},
             portfolio_links=payload.get("portfolio_links") or {},
             avatar_url=payload.get("avatar_url"),
+            avatar_storage_path=payload.get("avatar_storage_path"),
+            avatar_uploaded_at=avatar_uploaded_at,
             bio=payload.get("bio"),
             resume_storage_path=payload.get("resume_storage_path"),
             resume_filename=payload.get("resume_filename"),

@@ -71,3 +71,6 @@ jobs:
         image: europe-north2-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/collab-api/collab-api:latest
         region: europe-north2
         flags: --allow-unauthenticated
+        env_vars: |
+          ENVIRONMENT=production
+          FIREBASE_STORAGE_BUCKET=${{ secrets.FIREBASE_STORAGE_BUCKET }}

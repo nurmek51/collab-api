@@ -29,8 +29,8 @@ def initialize_firebase() -> Optional[firebase_admin.App]:
     options = {}
     if settings.firebase_project_id:
         options["projectId"] = settings.firebase_project_id
-    if settings.firebase_storage_bucket:
-        options["storageBucket"] = settings.firebase_storage_bucket
+    if settings.resolved_firebase_storage_bucket:
+        options["storageBucket"] = settings.resolved_firebase_storage_bucket
 
     credentials_json = getattr(settings, "firebase_credentials_json", None)
     try:
@@ -46,7 +46,26 @@ def initialize_firebase() -> Optional[firebase_admin.App]:
                 import json
 
                 cred_dict = json.loads(credentials_json)
-                print("Initializing Firebase with credentials from JSON string")
+                cred_project = cred_dict.get("project_id")
+                cred_email = cred_dict.get("client_email")
+                configured_project = settings.firebase_project_id
+                if (
+                    cred_project
+                    and configured_project
+                    and configured_project != "your-firebase-project-id"
+                    and cred_project != configured_project
+                ):
+                    print(
+                        "WARNING: Firebase credentials project mismatch: "
+                        f"credentials={cred_project} ({cred_email}), "
+                        f"configured={configured_project}. "
+                        "Storage and Firestore may fail with permission errors."
+                    )
+                print(
+                    "Initializing Firebase with credentials from JSON string",
+                    f"service_account={cred_email}",
+                    f"project={cred_project}",
+                )
                 cred = credentials.Certificate(cred_dict)
                 firebase_app = firebase_admin.initialize_app(cred, options or None)
             except Exception as e:
