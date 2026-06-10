@@ -34,8 +34,8 @@ class ResumeStorageService:
         return storage.bucket(self._bucket_name)
 
     @staticmethod
-    def build_resume_path(freelancer_id: uuid.UUID, extension: str) -> str:
-        return f"resumes/{freelancer_id}/resume.{extension}"
+    def build_resume_path(user_id: uuid.UUID, extension: str) -> str:
+        return f"resumes/users/{user_id}/resume.{extension}"
 
     def _validate_resume(self, content: bytes, content_type: Optional[str]) -> str:
         if not content:
@@ -53,13 +53,13 @@ class ResumeStorageService:
 
     async def upload_resume(
         self,
-        freelancer_id: uuid.UUID,
+        user_id: uuid.UUID,
         content: bytes,
         content_type: Optional[str],
         original_filename: Optional[str],
     ) -> tuple[str, str]:
         extension = self._validate_resume(content, content_type)
-        storage_path = self.build_resume_path(freelancer_id, extension)
+        storage_path = self.build_resume_path(user_id, extension)
 
         def _upload() -> None:
             bucket = self._get_bucket()

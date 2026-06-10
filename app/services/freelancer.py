@@ -70,6 +70,13 @@ class FreelancerService:
 
         await self.user_repo.add_role(user_id, "freelancer")
 
+        refreshed_user = await self.user_repo.get_by_id(user_id)
+        if refreshed_user and refreshed_user.resume_storage_path:
+            await self.freelancer_repo.update(
+                freelancer.freelancer_id,
+                self._resume_payload_from_user(refreshed_user),
+            )
+
         refreshed = await self.freelancer_repo.get_by_id(freelancer.freelancer_id)
         return await self._build_response(refreshed)
 
@@ -137,28 +144,37 @@ class FreelancerService:
         content_type: Optional[str],
         original_filename: Optional[str],
     ) -> ResumeUploadResponse:
-        freelancer = await self.freelancer_repo.get_by_user_id(user_id)
-        if not freelancer:
-            raise NotFoundException("Freelancer profile not found")
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
 
-        if freelancer.resume_storage_path:
+        freelancer = await self.freelancer_repo.get_by_user_id(user_id)
+
+        if user.resume_storage_path:
+            await self.storage_service.delete_resume(user.resume_storage_path)
+        if (
+            freelancer
+            and freelancer.resume_storage_path
+            and freelancer.resume_storage_path != user.resume_storage_path
+        ):
             await self.storage_service.delete_resume(freelancer.resume_storage_path)
 
         storage_path, filename = await self.storage_service.upload_resume(
-            freelancer.freelancer_id,
+            user_id,
             content,
             content_type,
             original_filename,
         )
         uploaded_at = datetime.utcnow()
-        await self.freelancer_repo.update(
-            freelancer.freelancer_id,
-            {
-                "resume_storage_path": storage_path,
-                "resume_filename": filename,
-                "resume_uploaded_at": uploaded_at.isoformat(),
-            },
-        )
+        resume_update = {
+            "resume_storage_path": storage_path,
+            "resume_filename": filename,
+            "resume_uploaded_at": uploaded_at.isoformat(),
+        }
+
+        await self.user_repo.update(user_id, resume_update)
+        if freelancer:
+            await self.freelancer_repo.update(freelancer.freelancer_id, resume_update)
 
         return ResumeUploadResponse(
             resume_filename=filename,
@@ -166,27 +182,37 @@ class FreelancerService:
         )
 
     async def delete_resume(self, user_id: uuid.UUID) -> None:
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
+
+        storage_path = user.resume_storage_path
         freelancer = await self.freelancer_repo.get_by_user_id(user_id)
-        if not freelancer:
-            raise NotFoundException("Freelancer profile not found")
-        if not freelancer.resume_storage_path:
+        if not storage_path and freelancer:
+            storage_path = freelancer.resume_storage_path
+
+        if not storage_path:
             raise BadRequestException("Resume not found")
 
-        await self.storage_service.delete_resume(freelancer.resume_storage_path)
-        await self.freelancer_repo.update(
-            freelancer.freelancer_id,
-            {
-                "resume_storage_path": None,
-                "resume_filename": None,
-                "resume_uploaded_at": None,
-            },
-        )
+        await self.storage_service.delete_resume(storage_path)
+
+        clear_payload = {
+            "resume_storage_path": None,
+            "resume_filename": None,
+            "resume_uploaded_at": None,
+        }
+        await self.user_repo.update(user_id, clear_payload)
+        if freelancer:
+            await self.freelancer_repo.update(freelancer.freelancer_id, clear_payload)
 
     async def get_resume_download_url_for_user(self, user_id: uuid.UUID) -> ResumeDownloadResponse:
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
+
         freelancer = await self.freelancer_repo.get_by_user_id(user_id)
-        if not freelancer:
-            raise NotFoundException("Freelancer profile not found")
-        return await self._get_resume_download_url(freelancer)
+        storage_path, filename = self._resolve_resume_metadata(user, freelancer)
+        return await self._build_resume_download_response(storage_path, filename)
 
     async def get_resume_download_url_for_freelancer(
         self,
@@ -195,18 +221,46 @@ class FreelancerService:
         freelancer = await self.freelancer_repo.get_by_id(freelancer_id)
         if not freelancer:
             raise NotFoundException("Freelancer not found")
-        return await self._get_resume_download_url(freelancer)
 
-    async def _get_resume_download_url(self, freelancer) -> ResumeDownloadResponse:
-        if not freelancer.resume_storage_path:
+        user = await self.user_repo.get_by_id(freelancer.user_id)
+        storage_path, filename = self._resolve_resume_metadata(user, freelancer)
+        return await self._build_resume_download_response(storage_path, filename)
+
+    @staticmethod
+    def _resume_payload_from_user(user) -> dict:
+        payload = {
+            "resume_storage_path": user.resume_storage_path,
+            "resume_filename": user.resume_filename,
+        }
+        if user.resume_uploaded_at:
+            uploaded_at = user.resume_uploaded_at
+            payload["resume_uploaded_at"] = (
+                uploaded_at.isoformat()
+                if isinstance(uploaded_at, datetime)
+                else uploaded_at
+            )
+        return payload
+
+    @staticmethod
+    def _resolve_resume_metadata(user, freelancer) -> tuple[Optional[str], Optional[str]]:
+        if freelancer and freelancer.resume_storage_path:
+            return freelancer.resume_storage_path, freelancer.resume_filename
+        if user and user.resume_storage_path:
+            return user.resume_storage_path, user.resume_filename
+        return None, None
+
+    async def _build_resume_download_response(
+        self,
+        storage_path: Optional[str],
+        filename: Optional[str],
+    ) -> ResumeDownloadResponse:
+        if not storage_path:
             raise BadRequestException("Resume not found")
 
-        download_url = await self.storage_service.generate_download_url(
-            freelancer.resume_storage_path
-        )
+        download_url = await self.storage_service.generate_download_url(storage_path)
         return ResumeDownloadResponse(
             download_url=download_url,
-            resume_filename=freelancer.resume_filename or "resume.pdf",
+            resume_filename=filename or "resume.pdf",
             expires_in_seconds=RESUME_SIGNED_URL_EXPIRATION_SECONDS,
         )
 
@@ -220,6 +274,8 @@ class FreelancerService:
 
         specializations = [Specialization(**spec) for spec in freelancer.specializations_with_levels or []]
         status = SchemaFreelancerStatus(freelancer.status.value)
+        storage_path, filename = self._resolve_resume_metadata(user, freelancer)
+        uploaded_at = freelancer.resume_uploaded_at or user.resume_uploaded_at
 
         return FreelancerResponse(
             freelancer_id=freelancer.freelancer_id,
@@ -237,9 +293,9 @@ class FreelancerService:
             portfolio_links=freelancer.portfolio_links,
             avatar_url=freelancer.avatar_url,
             bio=freelancer.bio,
-            has_resume=bool(freelancer.resume_storage_path),
-            resume_filename=freelancer.resume_filename,
-            resume_uploaded_at=freelancer.resume_uploaded_at,
+            has_resume=bool(storage_path),
+            resume_filename=filename,
+            resume_uploaded_at=uploaded_at,
             created_at=freelancer.created_at,
             updated_at=freelancer.updated_at,
         )

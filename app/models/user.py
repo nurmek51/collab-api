@@ -21,6 +21,9 @@ class User(TimestampedModel):
     surname: Optional[str] = None
     phone_number: Optional[str] = None
     roles: List[str] = Field(default_factory=list)
+    resume_storage_path: Optional[str] = None
+    resume_filename: Optional[str] = None
+    resume_uploaded_at: Optional[datetime] = None
 
     model_config = ConfigDict(use_enum_values=True, populate_by_name=True)
 
@@ -32,6 +35,8 @@ class User(TimestampedModel):
             data["created_at"] = data["created_at"].isoformat()
         if isinstance(data.get("updated_at"), datetime):
             data["updated_at"] = data["updated_at"].isoformat()
+        if isinstance(data.get("resume_uploaded_at"), datetime):
+            data["resume_uploaded_at"] = data["resume_uploaded_at"].isoformat()
         return data
 
     @classmethod
@@ -44,12 +49,18 @@ class User(TimestampedModel):
             created = datetime.fromisoformat(created)
         if isinstance(updated, str):
             updated = datetime.fromisoformat(updated)
+        resume_uploaded_at = payload.get("resume_uploaded_at")
+        if isinstance(resume_uploaded_at, str):
+            resume_uploaded_at = datetime.fromisoformat(resume_uploaded_at)
         return cls(
             user_id=uuid.UUID(str(payload["user_id"])),
             name=payload.get("name"),
             surname=payload.get("surname"),
             phone_number=payload.get("phone_number"),
             roles=list(payload.get("roles", [])),
+            resume_storage_path=payload.get("resume_storage_path"),
+            resume_filename=payload.get("resume_filename"),
+            resume_uploaded_at=resume_uploaded_at,
             created_at=created or datetime.utcnow(),
             updated_at=updated or datetime.utcnow(),
         )

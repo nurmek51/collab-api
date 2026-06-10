@@ -30,6 +30,12 @@ jobs:
         pip install -r requirements.txt
 
     - name: Run tests
+      env:
+        SECRET_KEY: test-secret-key-for-ci
+        ADMIN_PHONE: "+19999999999"
+        ADMIN_NAME: Admin
+        ADMIN_SURNAME: User
+        ENVIRONMENT: development
       run: |
         pytest tests/ -v
 

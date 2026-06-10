@@ -1,9 +1,10 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from prometheus_client import generate_latest, Counter, Histogram
 import structlog
 from .config.firebase import initialize_firebase
-from .config.settings import settings
 from .middleware import LoggingMiddleware, ErrorHandlingMiddleware, setup_cors_middleware
 from .routers import (
     auth_router,
@@ -38,12 +39,22 @@ structlog.configure(
 
 logger = structlog.get_logger()
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Application starting up")
+    initialize_firebase()
+    yield
+    logger.info("Application shutting down")
+
+
 app = FastAPI(
     title="Freelance Marketplace API",
     description="A production-ready backend for a freelance marketplace",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 REQUEST_COUNT = Counter('http_requests_total', 'Total HTTP requests', ['method', 'endpoint'])
@@ -62,17 +73,6 @@ app.include_router(orders_router)
 app.include_router(order_applications_router)
 app.include_router(admin_router)
 app.include_router(help_router)
-
-
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Application starting up")
-    initialize_firebase()
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Application shutting down")
 
 
 @app.get("/health")

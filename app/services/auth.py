@@ -55,11 +55,16 @@ class AuthService:
         # If firebase not used or invalid, verify OTP
         if not firebase_user:
             logger.info("Verifying OTP code with Twilio")
-            # Special case for admin phone from .env
             is_admin_phone = phone_number == settings.admin_phone
             is_mock_otp = verification.code == "123456"
+            is_dev_mock_otp = (
+                settings.environment != "production"
+                and verification.code in ("1234", "123456")
+            )
 
-            if is_admin_phone and is_mock_otp:
+            if is_dev_mock_otp:
+                logger.info("Development mock OTP used", phone_number=phone_number)
+            elif is_admin_phone and is_mock_otp:
                 logger.info("Admin mock OTP used", phone_number=phone_number)
             elif not await self.twilio_service.verify_otp(phone_number, verification.code):
                 logger.warning("Invalid OTP code provided", phone_number=phone_number)

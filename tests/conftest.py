@@ -1,7 +1,16 @@
+import os
+
+# Ensure required settings exist before importing the app (CI may not provide secrets).
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-ci")
+os.environ.setdefault("ADMIN_PHONE", "+19999999999")
+os.environ.setdefault("ADMIN_NAME", "Admin")
+os.environ.setdefault("ADMIN_SURNAME", "User")
+os.environ.setdefault("ENVIRONMENT", "development")
+
 import pytest
 import pytest_asyncio
 from httpx import AsyncClient
-from unittest.mock import patch, MagicMock, AsyncMock
+from unittest.mock import patch, AsyncMock
 
 # We MUST patch get_firestore_client during import to ensure tests don't touch production DB
 with patch("app.config.firebase.get_firestore_client", return_value=None):

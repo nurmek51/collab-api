@@ -8,13 +8,18 @@ from httpx import AsyncClient
 from app.config.settings import settings
 
 
-async def _create_freelancer(client: AsyncClient) -> tuple[dict, dict]:
+async def _login(client: AsyncClient, phone_number: str = "+1234567892") -> dict:
     response = await client.post("/auth/verify-otp", json={
-        "phone_number": "+1234567892",
+        "phone_number": phone_number,
         "code": "1234",
     })
+    assert response.status_code == 200, response.text
     token = response.json()["data"]["access_token"]
-    headers = {"Authorization": f"Bearer {token}"}
+    return {"Authorization": f"Bearer {token}"}
+
+
+async def _create_freelancer(client: AsyncClient) -> tuple[dict, dict]:
+    headers = await _login(client)
 
     await client.put("/users/me", json={"name": "Resume", "surname": "Tester"}, headers=headers)
 
@@ -37,15 +42,35 @@ async def _create_freelancer(client: AsyncClient) -> tuple[dict, dict]:
 
 
 @pytest.mark.asyncio
+async def test_upload_resume_without_freelancer_profile(client: AsyncClient):
+    headers = await _login(client, phone_number="+1234567894")
+
+    with patch("app.services.freelancer.ResumeStorageService") as mock_storage_cls:
+        storage = mock_storage_cls.return_value
+        storage.upload_resume = AsyncMock(side_effect=lambda user_id, content, content_type, filename: (
+            f"resumes/users/{user_id}/resume.pdf",
+            "my_resume.pdf",
+        ))
+        storage.delete_resume = AsyncMock()
+
+        files = {"file": ("my_resume.pdf", b"%PDF-1.4 test", "application/pdf")}
+        response = await client.post("/freelancers/profile/resume", headers=headers, files=files)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["resume_filename"] == "my_resume.pdf"
+
+
+@pytest.mark.asyncio
 async def test_upload_resume_success(client: AsyncClient):
     headers, freelancer = await _create_freelancer(client)
-    freelancer_id = uuid.UUID(freelancer["freelancer_id"])
-    uploaded_at = datetime.utcnow()
+    user_id = uuid.UUID(freelancer["user_id"])
 
     with patch("app.services.freelancer.ResumeStorageService") as mock_storage_cls:
         storage = mock_storage_cls.return_value
         storage.upload_resume = AsyncMock(return_value=(
-            f"resumes/{freelancer_id}/resume.pdf",
+            f"resumes/users/{user_id}/resume.pdf",
             "my_resume.pdf",
         ))
         storage.generate_download_url = AsyncMock(return_value="https://signed.example/resume.pdf")
@@ -69,12 +94,12 @@ async def test_upload_resume_success(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_get_resume_download_url(client: AsyncClient):
     headers, freelancer = await _create_freelancer(client)
-    freelancer_id = uuid.UUID(freelancer["freelancer_id"])
+    user_id = uuid.UUID(freelancer["user_id"])
 
     with patch("app.services.freelancer.ResumeStorageService") as mock_storage_cls:
         storage = mock_storage_cls.return_value
         storage.upload_resume = AsyncMock(return_value=(
-            f"resumes/{freelancer_id}/resume.pdf",
+            f"resumes/users/{user_id}/resume.pdf",
             "my_resume.pdf",
         ))
         storage.generate_download_url = AsyncMock(return_value="https://signed.example/resume.pdf")
@@ -96,12 +121,12 @@ async def test_get_resume_download_url(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_delete_resume(client: AsyncClient):
     headers, freelancer = await _create_freelancer(client)
-    freelancer_id = uuid.UUID(freelancer["freelancer_id"])
+    user_id = uuid.UUID(freelancer["user_id"])
 
     with patch("app.services.freelancer.ResumeStorageService") as mock_storage_cls:
         storage = mock_storage_cls.return_value
         storage.upload_resume = AsyncMock(return_value=(
-            f"resumes/{freelancer_id}/resume.pdf",
+            f"resumes/users/{user_id}/resume.pdf",
             "my_resume.pdf",
         ))
         storage.generate_download_url = AsyncMock(return_value="https://signed.example/resume.pdf")
@@ -124,7 +149,7 @@ async def test_delete_resume(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_upload_resume_rejects_invalid_type(client: AsyncClient):
-    headers, _ = await _create_freelancer(client)
+    headers = await _login(client, phone_number="+1234567895")
 
     files = {"file": ("notes.txt", b"plain text", "text/plain")}
     response = await client.post("/freelancers/profile/resume", headers=headers, files=files)
@@ -138,6 +163,7 @@ async def test_upload_resume_rejects_invalid_type(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_admin_can_get_freelancer_resume_url(client: AsyncClient):
     freelancer_headers, freelancer = await _create_freelancer(client)
+    user_id = uuid.UUID(freelancer["user_id"])
     freelancer_id = uuid.UUID(freelancer["freelancer_id"])
 
     admin_response = await client.post("/auth/verify-otp", json={
@@ -151,7 +177,7 @@ async def test_admin_can_get_freelancer_resume_url(client: AsyncClient):
     with patch("app.services.freelancer.ResumeStorageService") as mock_storage_cls:
         storage = mock_storage_cls.return_value
         storage.upload_resume = AsyncMock(return_value=(
-            f"resumes/{freelancer_id}/resume.pdf",
+            f"resumes/users/{user_id}/resume.pdf",
             "my_resume.pdf",
         ))
         storage.generate_download_url = AsyncMock(return_value="https://signed.example/admin-resume.pdf")
