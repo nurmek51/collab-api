@@ -2,7 +2,7 @@ from typing import Optional
 
 import uuid
 
-from ..exceptions import NotFoundException
+from ..exceptions import ConflictException, NotFoundException
 from ..repositories.user import UserRepository
 from ..repositories.client import ClientRepository
 from ..repositories.company import CompanyRepository
@@ -35,6 +35,13 @@ class AdminHelpService:
             user = await self.user_repo.get_by_id(user_id)
             if not user:
                 raise NotFoundException("User not found")
+
+            pending_help_request = await self.notification_repo.get_pending_help_request_by_user(user_id)
+            if pending_help_request:
+                raise ConflictException(
+                    "You already have a pending help request. "
+                    "Please wait until an admin resolves it before submitting a new one."
+                )
 
             # Get or create client profile for the user
             client = await self.client_repo.get_by_user_id(user_id)

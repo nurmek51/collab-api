@@ -8,7 +8,7 @@ from ..repositories.client import ClientRepository
 from ..repositories.order import OrderRepository
 from ..repositories.order_application import OrderApplicationRepository
 from ..schemas.company import CompanyCreate, CompanyUpdate, CompanyResponse
-from ..exceptions import NotFoundException, BadRequestException
+from ..exceptions import NotFoundException
 from ..utils.serialization import safe_model_dump
 
 
@@ -31,12 +31,6 @@ class CompanyService:
             raise NotFoundException("Client not found")
 
         payload = safe_model_dump(company_data, exclude_unset=True)
-        normalized_name = self.company_repo.normalize_name(payload.get("company_name"))
-        if normalized_name:
-            existing = await self.company_repo.get_by_normalized_name(normalized_name)
-            if existing:
-                raise BadRequestException("Company with this name already exists")
-
         payload.update({
             "client_id": str(client_id),
             "company_orders": [],

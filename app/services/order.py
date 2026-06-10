@@ -307,16 +307,6 @@ class OrderService:
         company_name: Optional[str],
         company_position: Optional[str],
     ):
-        normalized_name = self.company_repo.normalize_name(company_name)
-
-        if normalized_name:
-            existing = await self.company_repo.get_by_normalized_name(normalized_name)
-            if existing:
-                if client_id not in existing.owner_ids:
-                    await self.company_repo.add_owner(existing.company_id, client_id)
-                await self.client_repo.add_company(client_id, existing.company_id)
-                return await self.company_repo.get_by_id(existing.company_id)
-
         company_payload = {
             "client_id": str(client_id),
             "company_name": company_name,

@@ -66,3 +66,14 @@ class NotificationRepository(FirestoreRepository[Notification]):
             ]
         )
         return len(notifications)
+
+    async def get_pending_help_request_by_user(self, user_id: uuid.UUID) -> Optional[Notification]:
+        notifications = await self.query(
+            filters=[
+                ("user_id", "==", str(user_id)),
+                ("type", "==", NotificationType.HELP_REQUEST.value),
+                ("status", "==", NotificationStatus.PENDING.value),
+            ],
+            limit=1,
+        )
+        return notifications[0] if notifications else None

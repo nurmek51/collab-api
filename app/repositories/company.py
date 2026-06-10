@@ -3,8 +3,6 @@ from __future__ import annotations
 import uuid
 from typing import List, Optional
 
-from ..exceptions import BadRequestException
-
 from .base import FirestoreRepository
 from ..models.company import Company
 
@@ -25,9 +23,6 @@ class CompanyRepository(FirestoreRepository[Company]):
     async def create(self, payload: dict, entity_id: Optional[uuid.UUID] = None) -> Company:
         normalized = self.normalize_name(payload.get("company_name"))
         if normalized:
-            existing = await self.get_by_normalized_name(normalized)
-            if existing:
-                raise BadRequestException("Company with this name already exists")
             payload["normalized_company_name"] = normalized
 
         owner_ids = payload.get("owner_ids") or []
@@ -44,10 +39,6 @@ class CompanyRepository(FirestoreRepository[Company]):
     async def update(self, entity_id: uuid.UUID, payload: dict) -> Optional[Company]:
         if "company_name" in payload:
             normalized = self.normalize_name(payload.get("company_name"))
-            if normalized:
-                existing = await self.get_by_normalized_name(normalized)
-                if existing and existing.company_id != entity_id:
-                    raise BadRequestException("Company with this name already exists")
             payload["normalized_company_name"] = normalized
 
         if "owner_ids" in payload:
