@@ -1,6 +1,6 @@
 import uuid
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import List, Literal, Optional
 from datetime import datetime
 
 
@@ -18,6 +18,17 @@ class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     surname: Optional[str] = Field(None, min_length=1, max_length=100)
     phone_number: Optional[str] = Field(None, pattern=r'^\+?[1-9]\d{1,14}$')
+
+
+class AccountDeletionRequest(BaseModel):
+    """Explicit acknowledgement required before permanently deleting an account."""
+
+    confirm: Literal[True]
+
+
+class AccountDeletionResponse(BaseModel):
+    deleted: bool = True
+    deleted_resources: dict[str, int] = Field(default_factory=dict)
 
 
 class UserResponse(BaseModel):

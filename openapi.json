@@ -243,6 +243,197 @@
             "HTTPBearer": []
           }
         ]
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete Current User Account",
+        "description": "Permanently delete the current account and its associated marketplace data.",
+        "operationId": "delete_current_user_account_users_me_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountDeletionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/users/me/avatar": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get My Avatar Download Url",
+        "description": "Get a temporary signed download URL for the current user's avatar.",
+        "operationId": "get_my_avatar_download_url_users_me_avatar_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Upload User Avatar",
+        "description": "Upload or replace the user avatar (JPEG, PNG, WebP, max 2 MB).",
+        "operationId": "upload_user_avatar_users_me_avatar_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_user_avatar_users_me_avatar_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Delete User Avatar",
+        "description": "Delete the current user's avatar.",
+        "operationId": "delete_user_avatar_users_me_avatar_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/users/{user_id}/avatar": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Get User Avatar Download Url",
+        "description": "Get a temporary signed download URL for another user's avatar.",
+        "operationId": "get_user_avatar_download_url_users__user_id__avatar_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "user_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "User Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/users/{user_id}": {
@@ -396,6 +587,103 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/freelancers/profile/resume": {
+      "get": {
+        "tags": [
+          "Freelancers"
+        ],
+        "summary": "Get My Freelancer Resume Download Url",
+        "description": "Get a temporary signed download URL for the current freelancer's resume.",
+        "operationId": "get_my_freelancer_resume_download_url_freelancers_profile_resume_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Freelancers"
+        ],
+        "summary": "Upload Freelancer Resume",
+        "description": "Upload or replace the freelancer resume (PDF, DOC, DOCX, max 5 MB).",
+        "operationId": "upload_freelancer_resume_freelancers_profile_resume_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_freelancer_resume_freelancers_profile_resume_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Freelancers"
+        ],
+        "summary": "Delete Freelancer Resume",
+        "description": "Delete the current freelancer's resume.",
+        "operationId": "delete_freelancer_resume_freelancers_profile_resume_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
                 }
               }
             }
@@ -1941,6 +2229,55 @@
         }
       }
     },
+    "/admin/freelancers/{freelancer_id}/resume": {
+      "get": {
+        "tags": [
+          "Admin"
+        ],
+        "summary": "Get Freelancer Resume Download Url",
+        "description": "Get a temporary signed download URL for a freelancer's resume.",
+        "operationId": "get_freelancer_resume_download_url_admin_freelancers__freelancer_id__resume_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "freelancer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Freelancer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/APIResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/admin/orders/pending": {
       "get": {
         "tags": [
@@ -2233,6 +2570,20 @@
         ],
         "title": "APIResponse"
       },
+      "AccountDeletionRequest": {
+        "properties": {
+          "confirm": {
+            "const": true,
+            "title": "Confirm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "confirm"
+        ],
+        "title": "AccountDeletionRequest",
+        "description": "Explicit acknowledgement required before permanently deleting an account."
+      },
       "AdminHelpRequest": {
         "properties": {
           "reason": {
@@ -2260,6 +2611,34 @@
           "rejected"
         ],
         "title": "ApplicationStatus"
+      },
+      "Body_upload_freelancer_resume_freelancers_profile_resume_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_freelancer_resume_freelancers_profile_resume_post"
+      },
+      "Body_upload_user_avatar_users_me_avatar_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_user_avatar_users_me_avatar_post"
       },
       "ClientCreate": {
         "properties": {
@@ -3383,7 +3762,7 @@
         "properties": {
           "role": {
             "type": "string",
-            "pattern": "^(client|freelancer|admin)$",
+            "pattern": "^(client|freelancer)$",
             "title": "Role"
           }
         },

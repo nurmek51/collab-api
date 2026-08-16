@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, Path, UploadFile
 from ..deps.auth import get_current_user
 from ..models.user import User
 from ..schemas.common import APIResponse
-from ..schemas.user import UserUpdate
+from ..schemas.user import AccountDeletionRequest, UserUpdate
 from ..services.user import UserService
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -77,6 +77,20 @@ async def delete_user_avatar(
         user_service = UserService()
         await user_service.delete_avatar(current_user.user_id)
         return APIResponse(success=True, data={"deleted": True})
+    except Exception as e:
+        return APIResponse(success=False, error=str(e))
+
+
+@router.delete("/me", response_model=APIResponse)
+async def delete_current_user_account(
+    payload: AccountDeletionRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Permanently delete the current account and its associated marketplace data."""
+    try:
+        user_service = UserService()
+        result = await user_service.delete_account(current_user.user_id)
+        return APIResponse(success=True, data=result)
     except Exception as e:
         return APIResponse(success=False, error=str(e))
 

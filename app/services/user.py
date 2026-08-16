@@ -6,10 +6,16 @@ from typing import Optional
 import uuid
 
 from ..repositories.freelancer import FreelancerRepository
+from ..repositories.client import ClientRepository
+from ..repositories.company import CompanyRepository
+from ..repositories.notification import NotificationRepository
+from ..repositories.order import OrderRepository
+from ..repositories.order_application import OrderApplicationRepository
 from ..repositories.user import UserRepository
 from ..schemas.user import (
     AvatarDownloadResponse,
     AvatarUploadResponse,
+    AccountDeletionResponse,
     UserResponse,
     UserUpdate,
 )
@@ -23,10 +29,20 @@ class UserService:
         self,
         user_repo: Optional[UserRepository] = None,
         freelancer_repo: Optional[FreelancerRepository] = None,
+        client_repo: Optional[ClientRepository] = None,
+        company_repo: Optional[CompanyRepository] = None,
+        order_repo: Optional[OrderRepository] = None,
+        application_repo: Optional[OrderApplicationRepository] = None,
+        notification_repo: Optional[NotificationRepository] = None,
         storage_service: Optional[FirebaseStorageService] = None,
     ):
         self.user_repo = user_repo or UserRepository()
         self.freelancer_repo = freelancer_repo or FreelancerRepository()
+        self.client_repo = client_repo or ClientRepository()
+        self.company_repo = company_repo or CompanyRepository()
+        self.order_repo = order_repo or OrderRepository()
+        self.application_repo = application_repo or OrderApplicationRepository()
+        self.notification_repo = notification_repo or NotificationRepository()
         self.storage_service = storage_service or FirebaseStorageService()
 
     async def get_user(self, user_id: uuid.UUID) -> UserResponse:
@@ -116,6 +132,75 @@ class UserService:
         await self.user_repo.update(user_id, clear_payload)
         if freelancer:
             await self.freelancer_repo.update(freelancer.freelancer_id, clear_payload)
+
+    async def delete_account(self, user_id: uuid.UUID) -> AccountDeletionResponse:
+        """Permanently delete an account and data solely owned by that account."""
+        user = await self.user_repo.get_by_id(user_id)
+        if not user:
+            raise NotFoundException("User not found")
+
+        freelancer = await self.freelancer_repo.get_by_user_id(user_id)
+        client = await self.client_repo.get_by_user_id(user_id)
+        storage_paths = {
+            path
+            for path in (
+                user.avatar_storage_path,
+                user.resume_storage_path,
+                freelancer.avatar_storage_path if freelancer else None,
+                freelancer.resume_storage_path if freelancer else None,
+            )
+            if path
+        }
+
+        # Delete external files before database records so a storage error does not
+        # leave an account that can no longer be retried.
+        for storage_path in storage_paths:
+            await self.storage_service.delete_file(storage_path)
+
+        deleted = {
+            "user": 1,
+            "freelancer_profiles": 0,
+            "client_profiles": 0,
+            "companies": 0,
+            "orders": 0,
+            "order_applications": 0,
+            "notifications": 0,
+            "files": len(storage_paths),
+        }
+
+        if freelancer:
+            applications = await self.application_repo.get_by_freelancer_id(
+                freelancer.freelancer_id
+            )
+            for application in applications:
+                await self.application_repo.delete(application.id)
+            deleted["order_applications"] += len(applications)
+            await self.freelancer_repo.delete(freelancer.freelancer_id)
+            deleted["freelancer_profiles"] = 1
+
+        if client:
+            companies = await self.company_repo.get_by_client_id(client.client_id)
+            for company in companies:
+                orders = await self.order_repo.get_by_company_id(company.company_id)
+                for order in orders:
+                    applications = await self.application_repo.get_by_order_id(order.order_id)
+                    for application in applications:
+                        await self.application_repo.delete(application.id)
+                    deleted["order_applications"] += len(applications)
+                    await self.order_repo.delete(order.order_id)
+                deleted["orders"] += len(orders)
+                await self.company_repo.delete(company.company_id)
+            deleted["companies"] = len(companies)
+            await self.client_repo.delete(client.client_id)
+            deleted["client_profiles"] = 1
+
+        notifications = await self.notification_repo.get_by_user_id(user_id)
+        for notification in notifications:
+            await self.notification_repo.delete(notification.notification_id)
+        deleted["notifications"] = len(notifications)
+
+        await self.user_repo.delete(user_id)
+        return AccountDeletionResponse(deleted_resources=deleted)
 
     async def get_avatar_download_url(self, user_id: uuid.UUID) -> AvatarDownloadResponse:
         user = await self.user_repo.get_by_id(user_id)
