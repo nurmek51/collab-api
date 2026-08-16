@@ -194,7 +194,7 @@ class UserService:
             await self.client_repo.delete(client.client_id)
             deleted["client_profiles"] = 1
 
-        notifications = await self.notification_repo.get_by_user_id(user_id)
+        notifications = await self.notification_repo.get_for_account_deletion(user_id)
         for notification in notifications:
             await self.notification_repo.delete(notification.notification_id)
         deleted["notifications"] = len(notifications)

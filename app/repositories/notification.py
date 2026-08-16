@@ -39,6 +39,16 @@ class NotificationRepository(FirestoreRepository[Notification]):
             order_by=("created_at", "desc"),
         )
 
+    async def get_for_account_deletion(self, user_id: uuid.UUID) -> List[Notification]:
+        """Return all user notifications without ordering.
+
+        Firestore can serve this single-field query from its automatic index.
+        Deletion does not require presentation ordering, so avoiding the
+        ``created_at`` sort prevents account deletion from depending on a
+        composite index.
+        """
+        return await self.query(filters=[("user_id", "==", str(user_id))])
+
     async def get_by_order_id(self, order_id: uuid.UUID) -> List[Notification]:
         """Get notifications related to a specific order"""
         return await self.query(
