@@ -78,3 +78,43 @@ async def test_freelancer_creation_and_approval_flow(client: AsyncClient):
     data = response.json()
     assert data["success"] is True
     assert data["data"]["status"] == "approved"
+
+
+@pytest.mark.asyncio
+async def test_first_profile_put_creates_profile_for_legacy_onboarding(client: AsyncClient):
+    response = await client.post("/auth/verify-otp", json={
+        "phone_number": "+1234567892",
+        "code": "1234",
+    })
+    token = response.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    await client.post("/auth/select-role", json={"role": "freelancer"}, headers=headers)
+
+    payload = {
+        "iin": "123456789013",
+        "city": "Almaty",
+        "email": "legacy@example.com",
+        "specializations_with_levels": [
+            {"specialization": "Marketing", "level": "junior"},
+        ],
+        "name": "Legacy",
+        "surname": "User",
+        "phone_number": "+1234567892",
+        "bio": "Created through PUT",
+    }
+    response = await client.put("/freelancers/profile", json=payload, headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["success"] is True
+    assert data["data"]["email"] == "legacy@example.com"
+    assert data["data"]["status"] == "pending"
+
+    update_response = await client.put(
+        "/freelancers/profile",
+        json={"city": "Astana"},
+        headers=headers,
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["data"]["city"] == "Astana"

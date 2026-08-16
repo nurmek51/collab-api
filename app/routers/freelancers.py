@@ -1,13 +1,15 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, File, Path, Query, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Path, Query, UploadFile
+from pydantic import ValidationError
 
 from ..deps.auth import get_current_user, require_freelancer
 from ..models.user import User
 from ..schemas.common import APIResponse, PaginatedResponse
 from ..schemas.freelancer import FreelancerCreate, FreelancerUpdate
 from ..services.freelancer import FreelancerService
+from ..exceptions import NotFoundException
 
 router = APIRouter(prefix="/freelancers", tags=["Freelancers"])
 
@@ -42,11 +44,40 @@ async def update_freelancer_profile(
     freelancer_update: FreelancerUpdate,
     current_user: User = Depends(require_freelancer()),
 ):
+    """Update a freelancer profile, creating it for legacy onboarding clients.
+
+    The documented create operation remains ``POST /freelancers/profile``.  Some
+    released clients send their first, complete profile payload to this PUT
+    endpoint after choosing the freelancer role.  Treat that request as an
+    upsert so those clients do not become stuck with a missing profile.
+    """
     try:
         freelancer_service = FreelancerService()
-        freelancer = await freelancer_service.get_freelancer_by_user_id(current_user.user_id)
-        updated_freelancer = await freelancer_service.update_freelancer(freelancer.freelancer_id, freelancer_update)
+        try:
+            freelancer = await freelancer_service.get_freelancer_by_user_id(current_user.user_id)
+        except NotFoundException:
+            try:
+                create_data = FreelancerCreate.model_validate(
+                    freelancer_update.model_dump(by_alias=True, exclude_unset=True)
+                )
+            except ValidationError as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail="A complete freelancer profile is required for initial creation",
+                ) from exc
+            created_freelancer = await freelancer_service.create_freelancer_profile(
+                current_user.user_id,
+                create_data,
+            )
+            return APIResponse(success=True, data=created_freelancer)
+
+        updated_freelancer = await freelancer_service.update_freelancer(
+            freelancer.freelancer_id,
+            freelancer_update,
+        )
         return APIResponse(success=True, data=updated_freelancer)
+    except HTTPException:
+        raise
     except Exception as e:
         return APIResponse(success=False, error=str(e))
 
